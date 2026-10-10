@@ -1,0 +1,1 @@
+# generates AI explanations and prepares scan summaries
