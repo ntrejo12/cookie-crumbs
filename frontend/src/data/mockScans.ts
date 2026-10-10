@@ -3,7 +3,7 @@
  * Swap MOCK_SCANS for real data from the backend later; the shapes below are the contract.
  */
 
-export type Category = "advertising" | "analytics" | "social" | "fingerprint" | "unknown";
+export type Category = "advertising" | "analytics" | "social" | "fingerprinting" | "unknown";
 export type KnownCategory = Exclude<Category, "unknown">;
 
 export const CATEGORY_META: Record<Category, { label: string; color: string; why: string }> = {
@@ -22,8 +22,8 @@ export const CATEGORY_META: Record<Category, { label: string; color: string; why
     color: "#E3A857",
     why: "Lets a social network know you visited this page, even if you never clicked Like or Share.",
   },
-  fingerprint: {
-    label: "Fingerprint",
+  fingerprinting: {
+    label: "Fingerprinting",
     color: "#3D2618",
     why: "Recognizes your device from its settings, with no cookie needed. Clearing cookies won't stop it.",
   },
@@ -34,7 +34,7 @@ export const CATEGORY_META: Record<Category, { label: string; color: string; why
   },
 };
 
-export const CATEGORY_ORDER: KnownCategory[] = ["advertising", "analytics", "social", "fingerprint"];
+export const CATEGORY_ORDER: KnownCategory[] = ["advertising", "analytics", "social", "fingerprinting"];
 
 export interface Tracker {
   id: string;
@@ -69,7 +69,7 @@ export function scoreLabel(score: number) {
 }
 
 export function countByCategory(trackers: Tracker[]) {
-  const counts: Record<Category, number> = { advertising: 0, analytics: 0, social: 0, fingerprint: 0, unknown: 0 };
+  const counts: Record<Category, number> = { advertising: 0, analytics: 0, social: 0, fingerprinting: 0, unknown: 0 };
   trackers.forEach((t) => counts[t.category]++);
   return counts;
 }
@@ -106,7 +106,7 @@ export const MOCK_SCANS: SiteScan[] = [
       }),
       t("connect.facebook.net", "social", 5, 4, { owner: "Meta" }),
       t("platform.twitter.com", "social", 3, 2, { owner: "X" }),
-      t("fpjs.io", "fingerprint", 4, 0, { owner: "FingerprintJS" }),
+      t("fpjs.io", "fingerprinting", 4, 0, { owner: "FingerprintJS" }),
     ],
   },
   {
@@ -131,9 +131,9 @@ export const MOCK_SCANS: SiteScan[] = [
       t("connect.facebook.net", "social", 6, 4, { owner: "Meta" }),
       t("platform.twitter.com", "social", 4, 2, { owner: "X" }),
       t("snap.licdn.com", "social", 3, 2, { owner: "LinkedIn" }),
-      t("fpjs.io", "fingerprint", 5, 0, { owner: "FingerprintJS" }),
+      t("fpjs.io", "fingerprinting", 5, 0, { owner: "FingerprintJS" }),
       t("track-edge.net", "unknown", 7, 3, {
-        ai: { guess: "fingerprint", confidence: 0.58, reason: "Reads canvas and font details without setting cookies, which looks like device fingerprinting." },
+        ai: { guess: "fingerprinting", confidence: 0.58, reason: "Reads canvas and font details without setting cookies, which looks like device fingerprinting." },
       }),
     ],
   },
