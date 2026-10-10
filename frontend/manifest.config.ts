@@ -14,7 +14,9 @@ export default defineManifest({
   ],
   host_permissions: [
     "http://*/*",
-    "https://*/*"
+    "https://*/*",
+    "http://localhost:8000/*",
+    "http://127.0.0.1:8000/*"
   ],
   action: {
     default_popup: "popup.html"

@@ -276,7 +276,7 @@ export default function CrumbTrail({ scan, selectedId, onSelect }: CrumbTrailPro
 
 /** Small key under the graph */
 export function TrailLegend() {
-  const items = ["advertising", "analytics", "social", "fingerprint"] as const;
+  const items = ["advertising", "analytics", "social", "fingerprinting"] as const;
   return (
     <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-cocoa">
       {items.map((c) => (
