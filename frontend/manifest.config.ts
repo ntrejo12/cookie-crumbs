@@ -17,7 +17,7 @@ export default defineManifest({
     "https://*/*"
   ],
   action: {
-    default_popup: "index.html"
+    default_popup: "popup.html"
   },
   background: {
     service_worker: "src/background/index.ts",

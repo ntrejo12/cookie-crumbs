@@ -5,7 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:extension": "vite",
+    "dev:web": "vite --config vite.web.config.ts",
     "build": "tsc -b && vite build",
+    "build:web": "tsc -b && vite build --config vite.web.config.ts",
     "lint": "eslint .",
     "preview": "vite preview"
   },
