@@ -1,0 +1,15 @@
+{
+  "doubleclick.net":       {"company": "Google",   "category": "advertising"},
+  "googlesyndication.com": {"company": "Google",   "category": "advertising"},
+  "google-analytics.com":  {"company": "Google",   "category": "analytics"},
+  "googletagmanager.com":  {"company": "Google",   "category": "analytics"},
+  "facebook.net":          {"company": "Meta",     "category": "social"},
+  "facebook.com":          {"company": "Meta",     "category": "social"},
+  "hotjar.com":            {"company": "Hotjar",   "category": "analytics"},
+  "criteo.com":            {"company": "Criteo",   "category": "advertising"},
+  "adnxs.com":             {"company": "Xandr",    "category": "advertising"},
+  "scorecardresearch.com": {"company": "Comscore", "category": "analytics"},
+  "cloudflare.com":        {"company": "Cloudflare", "category": "cdn"},
+  "jsdelivr.net":          {"company": "jsDelivr", "category": "cdn"},
+  "gstatic.com":           {"company": "Google",   "category": "cdn"}
+}
