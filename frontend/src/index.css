@@ -1,15 +1,17 @@
-
 @import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:wght@700&display=swap");
 @import "tailwindcss";
 
 /* Cookie Crumbs theme tokens: usable as bg-crumbs-bg, text-dough, animate-float, etc. */
 @theme {
-  --color-crumbs-bg: #482e0e; /* logo background as it renders */
+  --color-crumbs-bg: #342107; /* logo background as it renders */
   --color-cream: #fff6e6;
   --color-dough: #e3a857;
   --color-crust: #bc7a2e;
   --color-chip: #3d2618;
   --color-ad: #9e2f2f;
+  --color-parchment: #f5e7d0; /* dashboard main area */
+  --color-line: #e5cfa8; /* borders, empty bar tracks */
+  --color-cocoa: #6b4a2e; /* muted text */
 
   --font-sans: "DM Sans", system-ui, sans-serif;
   --font-serif: "Fraunces", Georgia, serif;
@@ -24,10 +26,40 @@
       translate: 0 -10px;
     }
   }
+
+  /* dashboard: crumbs pop in, trail lines draw, bars grow */
+  --animate-pop: pop 0.5s cubic-bezier(0.3, 1.5, 0.6, 1) both;
+  @keyframes pop {
+    from {
+      transform: scale(0);
+      opacity: 0;
+    }
+  }
+  --animate-draw: draw 0.7s ease-out both;
+  @keyframes draw {
+    from {
+      stroke-dashoffset: 1;
+    }
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+  --animate-grow: grow 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  @keyframes grow {
+    from {
+      transform: scaleX(0);
+    }
+  }
+  --animate-fade: fade 0.6s ease-out both;
+  @keyframes fade {
+    from {
+      opacity: 0;
+    }
+  }
 }
 
 :root {
-  --crumbs-bg: #482e0e; /* logo background */
+  --crumbs-bg: #342107; /* logo background */
   font-family: "DM Sans", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
