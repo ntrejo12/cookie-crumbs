@@ -9,5 +9,6 @@ export default defineConfig({
     react(),
     crx({ manifest }),
     tailwindcss()
-  ]
+  ],
+  envDir: "..",
 });
