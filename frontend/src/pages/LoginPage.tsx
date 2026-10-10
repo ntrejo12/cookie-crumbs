@@ -1,10 +1,18 @@
 import { useState, type FormEvent } from "react";
 
+/**
+ * Cookie Crumbs: Login page
+ * Page background = logo background (#482E0E, set in index.css as bg-crumbs-bg).
+ * Frontend only: onLogin just receives the form values.
+ */
+
+// Deterministic pseudo-random so crumbs don't jump around between renders
 function rand(seed: number) {
   const x = Math.sin(seed * 9301 + 49297) * 233280;
   return x - Math.floor(x);
 }
 
+// Irregular rounded shapes, like the chunks flying off the logo
 const crumbShapes = [
   "42% 58% 46% 54% / 50% 44% 56% 50%",
   "35%",
