@@ -11,4 +11,9 @@ export default defineConfig({
     tailwindcss()
   ],
   envDir: "..",
+  server: {
+    host: "localhost",
+    port: 5174,
+    strictPort: true,
+  },
 });
