@@ -11,7 +11,15 @@ node_modules
 dist
 dist-ssr
 *.local
+
+# environment variables
 .env
+.env.*
+
+# dependencies
+node_modules/
+.venv/
+venv/
 
 # Python cache
 __pycache__/
@@ -27,3 +35,12 @@ __pycache__/
 *.njsproj
 *.sln
 *.sw?
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
