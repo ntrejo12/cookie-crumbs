@@ -1,6 +1,8 @@
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:wght@700&display=swap");
-@import "tailwindcss";
 
+@layer theme, base, neon, components, utilities;
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:wght@700&display=swap");
+@import "@neondatabase/neon-js/ui/css" layer(neon);
+@import "tailwindcss";
 /* Cookie Crumbs theme tokens: usable as bg-crumbs-bg, text-dough, animate-float, etc. */
 @theme {
   --color-crumbs-bg: #342107; /* logo background as it renders */
