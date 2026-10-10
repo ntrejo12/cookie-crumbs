@@ -1,0 +1,18 @@
+{
+  "google-analytics.com": {
+    "category": "analytics",
+    "description": "Google Analytics measurement services."
+  },
+  "doubleclick.net": {
+    "category": "advertising",
+    "description": "Google advertising and ad measurement services."
+  },
+  "facebook.net": {
+    "category": "social",
+    "description": "Meta social platform integrations and tracking services."
+  },
+  "hotjar.com": {
+    "category": "analytics",
+    "description": "Website analytics and user behavior tools."
+  }
+}
