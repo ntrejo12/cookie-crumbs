@@ -1,7 +1,7 @@
 # routes/ai.py
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from app.db.session import get_db                      # adjust
+from app.db.session import get_db                     
 from app.dependencies import get_current_user_id
 from app.schemas.ai import AIAnalysisRequest, AIAnalysisResponse
 from app.services import ai_service, preferences_service

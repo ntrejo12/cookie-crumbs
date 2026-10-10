@@ -2,8 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from backend.app.schemas.scan import ObservedDomain
-
+from app.schemas.scan import ObservedDomain
 
 RiskLevel = Literal["low", "medium", "high", "unknown"]
 Source = Literal["known_list", "model", "heuristic"]
@@ -41,3 +40,11 @@ class TrackerClassification(BaseModel):
 
 class ClassifyRequest(BaseModel):
     domains: list[ObservedDomain]
+
+class ObservedDomain(BaseModel):
+    domain: str
+    request_count: int = Field(default=1, ge=0)
+    resource_types: list[str] = Field(default_factory=list)
+    cookie_count: int = Field(default=0, ge=0)
+    max_cookie_lifetime_days: float | None = None
+    is_third_party: bool = True

@@ -7,9 +7,9 @@ from pathlib import Path
 import tldextract
 
 from app.schemas.ai import TrackerClassification
-from app.schemas.scan import ObservedDomain
+from app.schemas.ai import ObservedDomain, TrackerClassification
 
-DATA_PATH = Path(__file__).resolve().parent.parent / "data" / "trackers.json"
+DATA_PATH = Path(__file__).resolve().parent.parent / "data" / "tracker_domains.json"
 
 # offline-safe: bundled public-suffix snapshot, no network fetch
 _extract = tldextract.TLDExtract(suffix_list_urls=())
@@ -52,11 +52,15 @@ def _from_known(base: str) -> TrackerClassification | None:
         return None
     cat = entry["category"]
     return TrackerClassification(
-        name=base, company=entry["company"], category=cat,
+        name=base,
+        company=entry.get("company"),            # optional, not in the file yet
+        category=cat,
         risk_level=CATEGORY_RISK.get(cat, "unknown"),
-        confidence=1.0, source="known_list", verified=True,
+        confidence=1.0,
+        source="known_list",
+        verified=True,
+        explanation=entry.get("description"),    # reuse the file's description
     )
-
 
 def _from_heuristics(domain: str) -> TrackerClassification | None:
     d = domain.lower()

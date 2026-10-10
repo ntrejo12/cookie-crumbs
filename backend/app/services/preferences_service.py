@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from app.db.models import UserPreference
-from app.schemas.preference import UserPreferenceUpdate
+from app.schemas.preferences import UserPreferenceUpdate
 
 def get_or_create(db: Session, user_id: str) -> UserPreference:
     pref = db.query(UserPreference).filter_by(user_id=user_id).first()
