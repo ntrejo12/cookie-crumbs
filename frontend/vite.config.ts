@@ -5,15 +5,10 @@ import manifest from "./manifest.config.ts";
 import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
-<<<<<<< HEAD
-  plugins: [react()],
-  envDir: '..',
-})
-=======
   plugins: [
     react(),
     crx({ manifest }),
     tailwindcss()
-  ]
+  ],
+  envDir: "..",
 });
->>>>>>> origin/main
