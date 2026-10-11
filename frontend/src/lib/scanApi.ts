@@ -1,5 +1,8 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000";
 
+import type { CookieAnalysis } from "./cookieAnalysis";
+import type { PermissionAnalysis } from "./permissionAnalysis";
+
 export interface NetworkRequest {
   domain: string;
   request_count: number;
@@ -10,9 +13,11 @@ export interface ScanRequest {
   requests: NetworkRequest[];
   cookies: {
     total: number;
-    third_party: number;
+    third_party: number | null;
+    analysis: CookieAnalysis | null;
   };
-  permission_count: number;
+  permission_count: number | null;
+  permissions: PermissionAnalysis | null;
 }
 
 export interface TrackerInfo {
@@ -33,9 +38,11 @@ export interface ScanResponse {
   tracker_count: number;
   third_party_requests: number;
   cookie_count: number;
-  permission_count: number;
+  permission_count: number | null;
   trackers: TrackerInfo[];
   category_counts: Record<string, number>;
+  cookie_analysis: CookieAnalysis | null;
+  permissions: PermissionAnalysis | null;
 }
 
 export async function analyzeScan(

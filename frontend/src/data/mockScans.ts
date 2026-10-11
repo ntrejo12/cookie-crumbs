@@ -2,7 +2,8 @@
  * Mock scan data for the dashboard.
  * Swap MOCK_SCANS for real data from the backend later; the shapes below are the contract.
  */
-
+import type { CookieAnalysis } from "../lib/cookieAnalysis";
+import type { PermissionAnalysis } from "../lib/permissionAnalysis";
 export type Category = "advertising" | "analytics" | "social" | "fingerprint" | "unknown";
 export type KnownCategory = Exclude<Category, "unknown">;
 
@@ -61,6 +62,8 @@ export interface SiteScan {
   thirdPartyRequests: number;
   permissions: string[] | null;
   trackers: Tracker[];
+  cookieAnalysis?: CookieAnalysis | null;
+  permissionSettings?: PermissionAnalysis | null;
 }
 
 export function scoreLabel(score: number) {

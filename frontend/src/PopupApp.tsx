@@ -1,13 +1,8 @@
 import { useEffect, useState } from "react";
-import {
-  analyzeScan,
-  type ScanResponse,
-  type ScanRequest,
-} from "./lib/scanApi";
-import {
-  HANDOFF_STORAGE_PREFIX,
-  WEBSITE_ORIGIN,
-} from "./lib/handoff";
+import {analyzeScan, type ScanResponse, type ScanRequest,} from "./lib/scanApi";
+import {HANDOFF_STORAGE_PREFIX, WEBSITE_ORIGIN,} from "./lib/handoff";
+import { analyzeCookies } from "./lib/cookieAnalysis";
+import { analyzePermissions } from "./lib/permissionAnalysis";
 
 interface Stats {
   website: string;
@@ -74,26 +69,53 @@ export default function PopupApp() {
         })) as TabScan;
 
         // Count cookies accessible to this page.
-        // This is NOT a count of all third-party cookies.
-        const cookies = await chrome.cookies.getAll({ url: tab.url });
-
+        // This is NOT a count of all third-party cookies.   
         const website = new URL(tab.url).hostname;
 
         const requests = Object.entries(
-          tabScan?.website === website ? tabScan.requests : {}
+          tabScan?.website === website
+            ? tabScan.requests
+            : {},
         ).map(([domain, count]) => ({
           domain,
           request_count: count,
         }));
 
+        const observedDomains = requests.map(
+          (request) => request.domain,
+        );
+
+        const [pageCookies, cookieAnalysis, permissions] =
+          await Promise.all([
+            chrome.cookies.getAll({ url: tab.url }),
+            analyzeCookies(tab.url, observedDomains),
+            analyzePermissions(tab.url),
+          ]);
+
+        // These are effective permission SETTINGS, not proof
+        // that the website requested those permissions.
+        const explicitlyAllowedPermissions = Object.values(
+          permissions,
+        ).filter((setting) => setting === "allow").length;
+
+        const unknownPermissionSettings = Object.values(
+          permissions,
+        ).some((setting) => setting === "unknown");
+
         const payload: ScanRequest = {
           website,
           requests,
           cookies: {
-            total: cookies.length,
-            third_party: 0,
+            total: pageCookies.length,
+            // Stored cookies for observed third-party domains,
+            // not cookies confirmed sent during this visit.
+            third_party: cookieAnalysis.third_party_domain_count,
+            analysis: cookieAnalysis,
           },
-          permission_count: 0,
+          permission_count: unknownPermissionSettings
+            ? null
+            : explicitlyAllowedPermissions,
+          permissions,
         };
 
         const result = await analyzeScan(payload);

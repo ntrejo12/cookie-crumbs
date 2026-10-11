@@ -4,6 +4,7 @@ import Oven from "../components/Oven";
 import CrumbTrail, { TrailLegend } from "../components/CrumbTrail";
 import XRayPanel from "../components/XRayPanel";
 import { scoreLabel, type SiteScan } from "../data/mockScans";
+import PrivacyDetails from "../components/PrivacyDetails";
 
 interface ViewProps {
   scan: SiteScan;
@@ -50,9 +51,17 @@ export default function JarView({ scan, selectedId, onSelect }: ViewProps) {
     { label: "Known trackers", value: knownTrackers.length },
     { label: "3rd-party requests", value: scan.thirdPartyRequests },
     {
-      label: "Permissions",
-      value: scan.permissions?.length ?? "N/A",
-      hint: scan.permissions?.join(", ") || "Not measured yet",
+      label: "Allowed settings",
+      value: scan.permissionSettings
+        ? Object.values(scan.permissionSettings).some(
+            (setting) => setting === "unknown",
+          )
+          ? "N/A"
+          : Object.values(scan.permissionSettings).filter(
+              (setting) => setting === "allow",
+            ).length
+        : "N/A",
+      hint: "Allowed Chrome settings among location, notifications, camera, and microphone",
     },
   ];
 
@@ -97,7 +106,7 @@ export default function JarView({ scan, selectedId, onSelect }: ViewProps) {
         </div>
         <XRayPanel tracker={selected} loadedBy={loadedBy} onClose={() => onSelect(null)} />
       </section>
-
+      <PrivacyDetails scan={scan} />
     </div>
   );
 }

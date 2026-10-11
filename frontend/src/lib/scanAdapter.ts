@@ -74,12 +74,14 @@ export function toSiteScan(shared: SharedScan): SiteScan {
   }));
 
   return {
-    domain: result.website,
-    score: null,
-    scannedAt: new Date(shared.analyzedAt).toLocaleString(),
-    cookies: result.cookie_count,
-    thirdPartyRequests: result.third_party_requests,
-    permissions: null,
-    trackers,
-  };
+  domain: result.website,
+  score: null,
+  scannedAt: new Date(shared.analyzedAt).toLocaleString(),
+  cookies: result.cookie_count,
+  thirdPartyRequests: result.third_party_requests,
+  permissions: null,
+  trackers,
+  cookieAnalysis: result.cookie_analysis,
+  permissionSettings: result.permissions,
+};
 }
