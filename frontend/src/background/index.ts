@@ -4,6 +4,7 @@ import {
   HANDOFF_STORAGE_PREFIX,
   HANDOFF_EXPIRATION_MS,
   WEBSITE_ORIGIN,
+  handoffDebug,
 } from "../lib/handoff";
 
 type RequestCounts = Record<string, number>;
@@ -116,12 +117,18 @@ chrome.runtime.onMessage.addListener(
 
     if (message?.type === HANDOFF_REQUEST) {
       const token = message.token;
+      handoffDebug("Service worker received request", {
+        requestType: message.type,
+        senderUrlPresent: Boolean(sender.tab?.url),
+        frameId: sender.frameId,
+      });
 
       if (
         typeof token !== "string" ||
         !/^[a-f0-9]{32}$/.test(token) ||
         !sender.tab?.url
       ) {
+        handoffDebug("Service worker rejected request", { reason: "invalid token or sender tab" });
         sendResponse(null);
         return;
       }
@@ -133,6 +140,7 @@ chrome.runtime.onMessage.addListener(
       try {
         senderOrigin = new URL(sender.tab.url).origin;
       } catch {
+        handoffDebug("Service worker rejected request", { reason: "invalid sender URL" });
         sendResponse(null);
         return;
       }
@@ -141,6 +149,12 @@ chrome.runtime.onMessage.addListener(
         senderOrigin !== WEBSITE_ORIGIN ||
         sender.frameId !== 0
       ) {
+        handoffDebug("Service worker rejected request", {
+          reason: "origin or frame mismatch",
+          senderOrigin,
+          expectedOrigin: WEBSITE_ORIGIN,
+          frameId: sender.frameId,
+        });
         sendResponse(null);
         return;
       }
@@ -157,6 +171,9 @@ chrome.runtime.onMessage.addListener(
             Date.now() - handoff.createdAt >
               HANDOFF_EXPIRATION_MS
           ) {
+            handoffDebug("Service worker rejected request", {
+              reason: !handoff ? "token not found" : "token expired or mismatched",
+            });
             await chrome.storage.session.remove(key);
             sendResponse(null);
             return;
@@ -170,9 +187,12 @@ chrome.runtime.onMessage.addListener(
             token,
             scan: handoff.scan,
           });
+          handoffDebug("Service worker sent response", { responseType: HANDOFF_RESPONSE });
         },
       ).catch((error) => {
-        console.error("Handoff retrieval failed:", error);
+        handoffDebug("Service worker handoff failed", {
+          reason: error instanceof Error ? error.message : "Unknown error",
+        });
         sendResponse(null);
       });
 

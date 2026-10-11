@@ -1,7 +1,7 @@
 import {
   HANDOFF_REQUEST,
   HANDOFF_RESPONSE,
-  WEBSITE_ORIGIN,
+  handoffDebug,
 } from "./handoff";
 import {
   isSharedScan,
@@ -30,21 +30,40 @@ export function receiveScan(
   token: string,
 ): Promise<SharedScan> {
   return new Promise((resolve, reject) => {
+    const pageOrigin = window.location.origin;
+    handoffDebug("Dashboard handoff started", {
+      origin: pageOrigin,
+      tokenLength: token.length,
+    });
+
     if (!TOKEN_PATTERN.test(token)) {
+      handoffDebug("Scan rejected", { reason: "invalid token format" });
       reject(new Error("Invalid scan handoff token."));
       return;
     }
 
     let settled = false;
+    let requestIntervalId: number;
+    let requestCount = 0;
 
     const cleanup = () => {
       window.removeEventListener("message", onMessage);
       clearTimeout(timeoutId);
+      clearInterval(requestIntervalId);
     };
 
     const onMessage = (event: MessageEvent) => {
-      if (event.source !== window) return;
-      if (event.origin !== WEBSITE_ORIGIN) return;
+      if (event.source !== window) {
+        handoffDebug("Dashboard ignored message", { reason: "unexpected source" });
+        return;
+      }
+      if (event.origin !== pageOrigin) {
+        handoffDebug("Dashboard ignored message", {
+          reason: "unexpected origin",
+          origin: event.origin,
+        });
+        return;
+      }
 
       const data = event.data;
 
@@ -53,12 +72,16 @@ export function receiveScan(
         data.type !== HANDOFF_RESPONSE ||
         data.token !== token
       ) {
+        handoffDebug("Dashboard ignored message", { reason: "unexpected response shape" });
         return;
       }
+
+      handoffDebug("Dashboard received response", { responseType: data.type });
 
       if (settled) return;
 
       if (!isSharedScan(data.scan)) {
+        handoffDebug("Scan rejected", { reason: "invalid scan payload" });
         settled = true;
         cleanup();
         clearHandoffFragment();
@@ -69,6 +92,7 @@ export function receiveScan(
       settled = true;
       cleanup();
       clearHandoffFragment();
+      handoffDebug("Scan accepted");
       resolve(data.scan);
     };
 
@@ -78,6 +102,7 @@ export function receiveScan(
       settled = true;
       cleanup();
       clearHandoffFragment();
+      handoffDebug("Dashboard handoff timed out", { timeoutMs: 10000 });
 
       reject(
         new Error(
@@ -89,12 +114,24 @@ export function receiveScan(
 
     window.addEventListener("message", onMessage);
 
-    window.postMessage(
-      {
-        type: HANDOFF_REQUEST,
-        token,
-      },
-      WEBSITE_ORIGIN,
-    );
+    const requestHandoff = () => {
+      requestCount += 1;
+      if (requestCount === 1 || requestCount % 10 === 0) {
+        handoffDebug("Dashboard handoff request sent", {
+          requestType: HANDOFF_REQUEST,
+          requestCount,
+        });
+      }
+      window.postMessage(
+        {
+          type: HANDOFF_REQUEST,
+          token,
+        },
+        pageOrigin,
+      );
+    };
+
+    requestHandoff();
+    requestIntervalId = window.setInterval(requestHandoff, 250);
   });
 }

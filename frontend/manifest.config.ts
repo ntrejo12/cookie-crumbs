@@ -28,8 +28,11 @@ export default defineManifest({
   }, 
   content_scripts: [
     {
-      matches: ["http://localhost:5173/*"],
-      js: ["src/content/handoff.ts"],
+      matches: [
+        "http://localhost:5173/*",
+        "https://cookiecrumbs.club/*",
+      ],
+      js: ["src/content/handoff.iife.ts"],
       run_at: "document_start",
     },
   ],

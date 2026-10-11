@@ -19,11 +19,11 @@ interface TabScan {
 
 /** What the bandit says, based on known trackers. Tweak the thresholds here. */
 function verdict(trackers: number) {
-  if (trackers === 0) return "Spotless! Not a crumb in sight.";
+  if (trackers === 0) return "Spotless!";
   if (trackers <= 3) return "Not too crumby!";
-  if (trackers <= 9) return "Getting a little crumby...";
-  if (trackers <= 19) return "Pretty crumby. Trackers are watching.";
-  return "Crumbs everywhere! Time to clean up.";
+  if (trackers <= 9) return "A little crumby...";
+  if (trackers <= 19) return "Pretty crumby!";
+  return "So many crumbs!";
 }
 
 function toStats(scan: ScanResponse): Stats {
@@ -132,6 +132,10 @@ export default function PopupApp() {
 
   // Hand the scan to the website and open the dashboard on it
   async function openFullJar() {
+    handoffDebug("Extension button clicked", {
+      hasScan: Boolean(scan),
+      opening,
+    });
     if (!scan || opening) return;
 
     try {
@@ -143,6 +147,7 @@ export default function PopupApp() {
       const token = Array.from(bytes)
         .map((byte) => byte.toString(16).padStart(2, "0"))
         .join("");
+      handoffDebug("Scan token created", { tokenLength: token.length });
 
       const key = `${HANDOFF_STORAGE_PREFIX}${token}`;
 
@@ -157,15 +162,20 @@ export default function PopupApp() {
           },
         },
       });
+      handoffDebug("Scan stored for handoff", { storageKeyCreated: true });
 
       // Only the random identifier goes into the URL.
       // The scan itself never goes into the URL.
       await chrome.tabs.create({
-        url: `${WEBSITE_ORIGIN}/#scan=${token}`,
+        url: `${WEBSITE_ORIGIN}/dashboard#scan=${token}`,
       });
+      handoffDebug("Dashboard opened", { origin: WEBSITE_ORIGIN, path: "/dashboard" });
 
       window.close();
     } catch (err) {
+      handoffDebug("Extension handoff failed", {
+        reason: err instanceof Error ? err.message : "Unknown error",
+      });
       setError(
         err instanceof Error
           ? err.message
@@ -180,12 +190,12 @@ export default function PopupApp() {
 
   // what the bandit says
   const said = loading
-    ? "Sniffing out crumbs..."
+    ? "Sniffing..."
     : error
-      ? error
+      ? "Can't scan this page"
       : stats
         ? verdict(stats.trackers)
-        : "Nothing to see yet.";
+        : "Nothing yet.";
 
   const show = (n: number | undefined) => (loading || n === undefined ? "–" : n);
 
@@ -206,26 +216,22 @@ export default function PopupApp() {
             <>
               Scanning <span className="font-semibold text-chip">{stats.website}</span>
             </>
+          ) : error ? (
+            error
           ) : (
             "See who's following your crumbs."
           )}
         </p>
       </header>
 
-      {/* Bandit + speech bubble: positioned exactly as in the Canva mockup,
-          measured against the cookie grid below (left cookie starts at 35px, right cookie ends at 305px) */}
-      <section className="relative mt-2 h-[161px]">
-        <img
-          src="/popup/bandit.png"
-          alt=""
-          className="absolute left-[22px] top-[29px] w-[168px] select-none"
-          draggable={false}
-        />
-        <div className="absolute left-[195px] top-0 w-[138px]">
+      {/* Bandit + speech bubble: the bandit sits in the middle, the bubble floats off to its upper right */}
+      <section className="relative mt-2 pt-[23px]">
+        <img src="/popup/bandit.png" alt="" className="relative -left-3 mx-auto block w-[134px] select-none" draggable={false} />
+        <div className="absolute left-[calc(50%+48px)] top-[2px] w-[84px]">
           <img src="/popup/bubble.png" alt="" className="w-full select-none" draggable={false} />
           <p
             aria-live="polite"
-            className={`absolute bottom-[30%] left-[14%] right-[7%] top-[8%] flex items-center justify-center text-center font-hand text-[14px] font-bold leading-tight text-black ${
+            className={`absolute bottom-[20%] left-[8%] right-[4%] top-[6%] flex items-center justify-center text-center font-hand text-[16px] font-bold leading-[0.95] text-black ${
               loading ? "motion-safe:animate-pulse" : ""
             }`}
           >

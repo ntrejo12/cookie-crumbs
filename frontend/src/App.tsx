@@ -177,15 +177,11 @@ function App() {
         <Route
           path="/"
           element={
-            user ? (
-              <Navigate to="/dashboard" replace />
-            ) : (
-              <LoginPage
-                mode="login"
-                onLogin={({ email, remember }) => signIn({ name: nameFromEmail(email), email }, remember)}
-                onSwitchMode={() => navigate("/signup")}
-              />
-            )
+            <LoginPage
+              mode="login"
+              onLogin={({ email, remember }) => signIn({ name: nameFromEmail(email), email }, remember)}
+              onSwitchMode={() => navigate("/signup")}
+            />
           }
         />
         <Route
