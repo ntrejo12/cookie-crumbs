@@ -68,16 +68,16 @@ export default function TasteTestView({ scans }: { scans: SiteScan[] }) {
   const leftCounts = countByCategory(left.trackers);
   const rightCounts = countByCategory(right.trackers);
 
-  // the "Your paragraph text" spot in the mockup: who's crumbier
-  const verdict =
+  // the "winner" spot in the mockup: who's crumbier, between the two titles
+  const winner =
     left.domain === right.domain
-      ? "Pick two different sites to compare."
+      ? { title: "Pick two different sites", sub: "" }
       : left.trackers.length === right.trackers.length
-        ? "It's a tie. Both leave the same crumbs."
+        ? { title: "It's a tie!", sub: "Same number of trackers" }
         : (() => {
             const [more, less] = left.trackers.length > right.trackers.length ? [left, right] : [right, left];
             const ratio = (more.trackers.length / Math.max(1, less.trackers.length)).toFixed(1);
-            return `${more.domain} is crumbier, with ${ratio}x the trackers.`;
+            return { title: `${more.domain} is crumbier`, sub: `${ratio}x the trackers` };
           })();
 
   const header = (n: 1 | 2, scan: SiteScan, set: (d: string) => void, cx: number, top: number) => (
@@ -134,14 +134,21 @@ export default function TasteTestView({ scans }: { scans: SiteScan[] }) {
         {header(1, left, setLeftDomain, 224, 38)}
         {header(2, right, setRightDomain, 839, 21)}
 
-        {/* verdict where the mockup's paragraph text sits */}
-        <p
+        {/* winner: between the two titles, slightly below them (same spot as the mockup) */}
+        <div
           aria-live="polite"
-          className="absolute -translate-x-1/2 -translate-y-1/2 text-center font-hand leading-tight text-chip"
-          style={{ left: "50%", top: py(375), width: px(280), fontSize: fs(19) }}
+          className="absolute -translate-x-1/2 -translate-y-1/2 text-center leading-tight"
+          style={{ left: px(533), top: py(146), width: px(320) }}
         >
-          {verdict}
-        </p>
+          <p className="font-sans font-bold text-black" style={{ fontSize: fs(19) }}>
+            {winner.title}
+          </p>
+          {winner.sub && (
+            <p className="font-hand text-chip" style={{ fontSize: fs(16) }}>
+              {winner.sub}
+            </p>
+          )}
+        </div>
 
         {/* labels, arrows and the counts in the milk */}
         <svg viewBox={`0 0 ${W} ${H}`} className="absolute inset-0 h-full w-full" aria-hidden>

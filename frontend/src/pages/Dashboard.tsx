@@ -43,7 +43,7 @@ export default function Dashboard({ user, onLogout, onLogin, onSignUp, onUpdateU
     <div className="min-h-screen bg-parchment font-sans text-chip">
       <Sidebar view={view} onChange={setView} user={user} onLogout={onLogout} onLogin={onLogin} />
 
-      <main className="px-4 py-6 sm:px-8 lg:ml-64 lg:px-10 lg:py-8">
+      <main className="overflow-x-clip px-4 py-6 sm:px-8 lg:ml-64 lg:px-10 lg:py-8">
         <div className="mx-auto max-w-6xl">
           {showSitePicker && (
             <div className="mb-6 flex flex-wrap items-center justify-between gap-3">

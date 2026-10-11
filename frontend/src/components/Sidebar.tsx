@@ -34,7 +34,7 @@ export default function Sidebar({ view, onChange, user, onLogout, onLogin }: Sid
   );
 
   return (
-    <aside className="bg-crumbs-bg text-cream lg:fixed lg:inset-y-0 lg:left-0 lg:flex lg:w-64 lg:flex-col">
+    <aside className="relative z-20 bg-crumbs-bg text-cream lg:fixed lg:inset-y-0 lg:left-0 lg:flex lg:w-64 lg:flex-col">
       <div className="flex items-center gap-2.5 px-5 pt-5 lg:px-6 lg:pt-7">
         <img src="/logo.png" alt="" className="h-10 w-auto" />
         <span className="font-serif text-xl font-bold">Cookie Crumbs</span>
