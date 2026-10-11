@@ -83,7 +83,7 @@ function t(domain: string, category: Category, requests: number, cookies: number
 
 export const MOCK_SCANS: SiteScan[] = [
   {
-    domain: "example.com",
+    domain: "espn.com",
     score: 62,
     scannedAt: "Oct 10, 9:41 AM",
     cookies: 48,
@@ -110,7 +110,7 @@ export const MOCK_SCANS: SiteScan[] = [
     ],
   },
   {
-    domain: "dailyscoop.news",
+    domain: "cnn.com",
     score: 82,
     scannedAt: "Oct 10, 9:52 AM",
     cookies: 131,
@@ -138,7 +138,7 @@ export const MOCK_SCANS: SiteScan[] = [
     ],
   },
   {
-    domain: "quietrecipes.com",
+    domain: "allrecipes.com",
     score: 41,
     scannedAt: "Oct 10, 10:03 AM",
     cookies: 19,

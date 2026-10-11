@@ -177,7 +177,7 @@ export default function SettingsView({ user, onUpdateUser, onLogout, onDeleteAcc
         </Section>
 
         {/* Data */}
-        <Section title="Your data" sub="Take it with you or sweep it away.">
+        <Section title="Your Data" sub="Take it with you or sweep it away.">
           <div className="flex flex-wrap items-center gap-3">
             <button type="button" onClick={downloadData} className={secondaryBtn}>
               Download my data
@@ -195,7 +195,7 @@ export default function SettingsView({ user, onUpdateUser, onLogout, onDeleteAcc
 
         {/* Session / danger zone */}
         {user && (
-          <Section title="Leave the jar" sub="Log out on this device, or delete your account for good.">
+          <Section title="Leave The Jar" sub="Log out on this device, or delete your account for good.">
             <div className="flex flex-wrap gap-3">
               <button type="button" onClick={onLogout} className={secondaryBtn}>
                 Log out

@@ -1,10 +1,10 @@
 export type View = "jar" | "trail" | "taste" | "class" | "settings";
 
 const NAV: { id: View; title: string; sub: string }[] = [
-  { id: "jar", title: "Cookie jar", sub: "Overview" },
-  { id: "trail", title: "Crumb trail", sub: "Who's tracking you" },
-  { id: "taste", title: "Crumb test", sub: "Compare sites" },
-  { id: "class", title: "Behind the crumbs", sub: "Learn" },
+  { id: "jar", title: "Cookie Jar", sub: "Overview" },
+  { id: "trail", title: "Crumb Trail", sub: "Who's tracking you" },
+  { id: "taste", title: "Crumb Test", sub: "Compare sites" },
+  { id: "class", title: "Behind The Crumbs", sub: "Learn" },
   { id: "settings", title: "Settings", sub: "Account & privacy" },
 ];
 

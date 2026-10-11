@@ -29,12 +29,12 @@ const LESSONS = [
   },
 ];
 
-/** Behind the crumbs: plain-English explanations, expandable and keyboard friendly. */
+/** Behind The Crumbs: plain-English explanations, expandable and keyboard friendly. */
 export default function CookieClassView() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="font-serif text-3xl font-bold text-chip sm:text-4xl">Behind the crumbs</h1>
+        <h1 className="font-serif text-3xl font-bold text-chip sm:text-4xl">Behind The Crumbs</h1>
         <p className="mt-1 text-cocoa">Everything on this dashboard, explained without the jargon.</p>
       </header>
 

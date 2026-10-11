@@ -101,7 +101,7 @@ export default function XRayPanel({ tracker, loadedBy, onClose }: XRayPanelProps
       )}
 
       <div className="mt-4">
-        <h4 className="text-sm font-bold text-chip">Why it matters</h4>
+        <h4 className="text-sm font-bold text-chip">Why It Matters</h4>
         <p className="mt-1 text-sm text-cocoa">
           {unknown ? `If the guess is right: ${CATEGORY_META[effective].why}` : meta.why}
         </p>

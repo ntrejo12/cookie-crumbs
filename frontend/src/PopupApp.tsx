@@ -19,7 +19,7 @@ interface Stats {
 }
 
 const TEST_STATS: Stats = {
-  website: "example.com",
+  website: "espn.com",
   trackers: 7,
   requests: 42,
   cookies: 18,
@@ -120,8 +120,8 @@ export default function PopupApp() {
 
   // Go straight into the dashboard, opened on the site you're looking at
   function openFullJar() {
-    const site = stats?.website ? `?site=${encodeURIComponent(stats.website)}` : "";
-    chrome.tabs.create({ url: DASHBOARD_URL + site });
+    const site = stats?.website ? `&site=${encodeURIComponent(stats.website)}` : "";
+    chrome.tabs.create({ url: `${DASHBOARD_URL}?from=extension${site}` });
   }
 
   // what the bandit says

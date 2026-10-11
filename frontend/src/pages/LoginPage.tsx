@@ -148,7 +148,7 @@ export default function LoginPage({ mode = "login", onLogin, onSignUp, onSwitchM
           className="rounded-3xl border-2 border-crust bg-cream p-7 shadow-[0_20px_50px_rgba(0,0,0,0.35)] sm:px-10 sm:py-8"
         >
           <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-            <h2 className="font-serif text-2xl font-bold text-chip">{signup ? "Bake an account" : "Welcome back"}</h2>
+            <h2 className="font-serif text-2xl font-bold text-chip">{signup ? "Bake An Account" : "Welcome Back"}</h2>
             <p className="text-sm text-[#6B4A2E]">
               {signup ? "Mix in your details to start your cookie jar." : "Log in to open your cookie jar."}
             </p>
