@@ -20,25 +20,35 @@ export default function TasteTestView({ scans }: { scans: SiteScan[] }) {
     }),
   );
 
-  const crumbier = left.score === right.score ? null : left.score > right.score ? left : right;
-  const other = crumbier === left ? right : left;
-  const ratio = crumbier ? (crumbier.trackers.length / Math.max(1, other.trackers.length)).toFixed(1) : null;
+  const bothScored = left.score !== null && right.score !== null;
 
-  const side = (scan: SiteScan, pick: string, setPick: (d: string) => void, label: string) => (
-    <div className={`rounded-2xl border-2 bg-cream p-5 sm:p-7 ${crumbier === scan ? "border-ad" : "border-crust"}`}>
-      <SitePicker scans={scans} value={pick} onChange={setPick} label={label} />
+  const crumbier = bothScored ? left.score! === right.score! ? null : left.score! > right.score! ? left : right : null;
+  // const other = crumbier === left ? right : left;
+  // const ratio = crumbier ? (crumbier.trackers.length / Math.max(1, other.trackers.length)).toFixed(1) : null;
+
+  const side = (scan: SiteScan, selected: string, onSelect: (domain: string) => void, label: string,) => (
+    <div className="rounded-2xl border-2 border-crust bg-cream p-5 sm:p-7">
+      <SitePicker scans={scans} value={selected} onChange={onSelect} label={label}/>
       <div className="mt-5 flex items-center gap-4">
-        <CookieScore key={scan.domain} score={scan.score} size={92} />
+        <CookieScore key={scan.domain} score={scan.score} size={92}/>
+
         <div className="min-w-0">
-          <h2 className="break-all font-serif text-2xl font-bold text-chip">{scan.domain}</h2>
-          <p className="text-sm text-cocoa">{scoreLabel(scan.score)}</p>
+          <h2 className="break-all font-serif text-2xl font-bold text-chip">
+            {scan.domain}
+          </h2>
+
+          <p className="text-sm text-cocoa">
+            {scan.score === null ? "Crumb Score pending" : scoreLabel(scan.score)}
+          </p>
+
           <p className="mt-1 text-sm font-semibold text-chip">
-            {scan.trackers.length} trackers · {scan.cookies} cookies
+            {scan.trackers.filter((t) => t.known).length} known trackers · {scan.cookies} page-accessible cookies
           </p>
         </div>
       </div>
+
       <div className="mt-6">
-        <CategoryBars key={scan.domain} trackers={scan.trackers} max={max} />
+        <CategoryBars key={scan.domain} trackers={scan.trackers} max={max}/>
       </div>
     </div>
   );
@@ -58,9 +68,11 @@ export default function TasteTestView({ scans }: { scans: SiteScan[] }) {
       <p className="rounded-2xl bg-cream px-5 py-4 text-center font-semibold text-chip" aria-live="polite">
         {left.domain === right.domain
           ? "Pick two different sites to compare."
-          : crumbier
-            ? `${crumbier.domain} is crumbier, with ${ratio}x the trackers of ${other.domain}.`
-            : "It's a tie. Both leave the same amount of crumbs."}
+          : !bothScored
+            ? "Crumb Scores aren't available yet. Compare the tracker categories above."
+            : crumbier
+              ? `${crumbier.domain} has the higher Crumb Score.`
+              : "Both sites have the same Crumb Score."}
       </p>
 
       <div className="rounded-2xl bg-chip px-6 py-4 text-cream">
