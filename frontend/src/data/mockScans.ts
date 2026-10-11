@@ -36,28 +36,30 @@ export const CATEGORY_META: Record<Category, { label: string; color: string; why
 
 export const CATEGORY_ORDER: KnownCategory[] = ["advertising", "analytics", "social", "fingerprinting"];
 
+
 export interface Tracker {
   id: string;
   domain: string;
   category: Category;
   requests: number;
-  cookies: number;
-  /** Found in the trusted tracker database */
+  cookies: number | null;
   known: boolean;
   owner?: string;
-  /** id of the tracker that loaded this one (draws a second-level crumb) */
   via?: string;
-  /** Only for unknown domains: the AI model's estimate */
-  ai?: { guess: KnownCategory; confidence: number; reason: string };
+  ai?: {
+    guess: KnownCategory;
+    confidence: number;
+    reason: string;
+  };
 }
 
 export interface SiteScan {
   domain: string;
-  score: number; // 0-100, higher = more crumbs left behind
+  score: number | null;
   scannedAt: string;
   cookies: number;
   thirdPartyRequests: number;
-  permissions: string[];
+  permissions: string[] | null;
   trackers: Tracker[];
 }
 

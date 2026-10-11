@@ -81,7 +81,7 @@ export default function TrailView({ scan, selectedId, onSelect }: ViewProps) {
                       </span>
                     </td>
                     <td className="px-3 py-3 text-right tabular-nums text-chip">{t.requests}</td>
-                    <td className="px-3 py-3 text-right tabular-nums text-chip">{t.cookies}</td>
+                    <td className="px-3 py-3 text-right tabular-nums text-chip">{t.cookies ?? "N/A"}</td>
                     <td className="px-5 py-3 sm:px-6">
                       {t.known ? (
                         <span className="text-[#3E7A3A]">Known</span>

@@ -12,23 +12,58 @@ const CHIPS: [number, number, number][] = [
 ];
 
 /** The cookie badge with a bite out of it and the crumb score in the middle. */
-export default function CookieScore({ score, size = 96 }: { score: number; size?: number }) {
-  const maskId = `bite-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
+export default function CookieScore({
+  score,
+  size = 96,
+}: {
+  score: number | null;
+  size?: number;
+}) {
+  const maskId = `bite-${useId().replace(
+    /[^a-zA-Z0-9_-]/g,
+    "",
+  )}`;
 
   return (
-    <svg width={size} height={size} viewBox="0 0 100 100" role="img" aria-label={`Crumb score ${score} out of 100`} className="shrink-0">
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 100 100"
+      role="img"
+      aria-label={
+        score === null
+          ? "Crumb score not available yet"
+          : `Crumb score ${score} out of 100`
+      }
+      className="shrink-0"
+    >
       <defs>
         <mask id={maskId}>
           <rect width="100" height="100" fill="white" />
           <circle cx="88" cy="14" r="17" fill="black" />
         </mask>
       </defs>
+
       <g mask={`url(#${maskId})`}>
-        <circle cx="50" cy="50" r="46" fill="#E3A857" stroke="#BC7A2E" strokeWidth="3" />
+        <circle
+          cx="50"
+          cy="50"
+          r="46"
+          fill="#E3A857"
+          stroke="#BC7A2E"
+          strokeWidth="3"
+        />
         {CHIPS.map(([cx, cy, r]) => (
-          <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r={r} fill="#3D2618" />
+          <circle
+            key={`${cx}-${cy}`}
+            cx={cx}
+            cy={cy}
+            r={r}
+            fill="#3D2618"
+          />
         ))}
       </g>
+
       <text
         x="50"
         y="52"
@@ -36,10 +71,10 @@ export default function CookieScore({ score, size = 96 }: { score: number; size?
         dominantBaseline="middle"
         fontFamily="Fraunces, Georgia, serif"
         fontWeight="700"
-        fontSize="32"
+        fontSize={score === null ? 25 : 32}
         fill="#3D2618"
       >
-        {score}
+        {score ?? "N/A"}
       </text>
     </svg>
   );

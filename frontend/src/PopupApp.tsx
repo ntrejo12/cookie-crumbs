@@ -4,6 +4,10 @@ import {
   type ScanResponse,
   type ScanRequest,
 } from "./lib/scanApi";
+import {
+  HANDOFF_STORAGE_PREFIX,
+  WEBSITE_ORIGIN,
+} from "./lib/handoff";
 
 const WEBSITE_URL = "http://localhost:5173/";
 
@@ -13,10 +17,9 @@ interface TabScan {
 }
 
 export default function PopupApp() {
-  const [scan, setScan] = useState<ScanResponse | null>(
-    null
-  );
+  const [scan, setScan] = useState<ScanResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [opening, setOpening] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -95,8 +98,49 @@ export default function PopupApp() {
     void loadScan();
   }, []);
 
-  function openFullJar() {
-    chrome.tabs.create({ url: WEBSITE_URL });
+async function openFullJar() {
+    if (!scan || opening) return;
+
+    try {
+      setOpening(true);
+      setError(null);
+
+      // Cryptographically random, single-use handoff token.
+      const bytes = crypto.getRandomValues(new Uint8Array(16));
+      const token = Array.from(bytes)
+        .map((byte) => byte.toString(16).padStart(2, "0"))
+        .join("");
+
+      const key = `${HANDOFF_STORAGE_PREFIX}${token}`;
+
+      await chrome.storage.session.set({
+        [key]: {
+          token,
+          createdAt: Date.now(),
+          scan: {
+            version: 1,
+            analyzedAt: new Date().toISOString(),
+            result: scan,
+          },
+        },
+      });
+
+      // Only the random identifier goes into the URL.
+      // The scan itself never goes into the URL.
+      await chrome.tabs.create({
+        url: `${WEBSITE_ORIGIN}/#scan=${token}`,
+      });
+
+      window.close();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to open the full dashboard.",
+      );
+    } finally {
+      setOpening(false);
+    }
   }
 
   return (
@@ -217,11 +261,14 @@ export default function PopupApp() {
 
       <button
         type="button"
-        onClick={openFullJar}
+        onClick={() => void openFullJar()}
+        disabled={!scan || loading || opening}
         className="w-full rounded-full bg-chip px-5 py-3
-                   font-bold text-cream hover:opacity-90"
+                   font-bold text-cream hover:opacity-90
+                   disabled:cursor-not-allowed
+                   disabled:opacity-50"
       >
-        Open the full jar
+        {opening ? "Opening the full jar..." : "Open the full jar"}
       </button>
     </div>
   );

@@ -1,8 +1,22 @@
+import {
+  HANDOFF_REQUEST,
+  HANDOFF_RESPONSE,
+  HANDOFF_STORAGE_PREFIX,
+  HANDOFF_EXPIRATION_MS,
+  WEBSITE_ORIGIN,
+} from "../lib/handoff";
+
 type RequestCounts = Record<string, number>;
 
 interface TabScan {
   website: string;
   requests: RequestCounts;
+}
+
+interface PendingHandoff {
+  token: string;
+  createdAt: number;
+  scan: unknown;
 }
 
 const scans = new Map<number, TabScan>();
@@ -87,20 +101,84 @@ chrome.webRequest.onBeforeRequest.addListener(
 
 chrome.runtime.onMessage.addListener(
   (message, sender, sendResponse) => {
-    if (message.type !== "GET_TAB_SCAN") {
+    if (message?.type === "GET_TAB_SCAN") {
+      const tabId = message.tabId as number;
+
+      sendResponse(
+        scans.get(tabId) ?? {
+          website: "",
+          requests: {},
+        },
+      );
+
       return;
     }
 
-    const tabId = message.tabId as number;
-    const scan = scans.get(tabId);
+    if (message?.type === HANDOFF_REQUEST) {
+      const token = message.token;
 
-    sendResponse(
-      scan ?? {
-        website: "",
-        requests: {},
+      if (
+        typeof token !== "string" ||
+        !/^[a-f0-9]{32}$/.test(token) ||
+        !sender.tab?.url
+      ) {
+        sendResponse(null);
+        return;
       }
-    );
-  }
+
+      // Only a content script in our local dashboard
+      // may redeem a pending handoff.
+      let senderOrigin: string;
+
+      try {
+        senderOrigin = new URL(sender.tab.url).origin;
+      } catch {
+        sendResponse(null);
+        return;
+      }
+
+      if (
+        senderOrigin !== WEBSITE_ORIGIN ||
+        sender.frameId !== 0
+      ) {
+        sendResponse(null);
+        return;
+      }
+
+      const key = `${HANDOFF_STORAGE_PREFIX}${token}`;
+
+      void chrome.storage.session.get(key).then(
+        async (stored) => {
+          const handoff = stored[key] as PendingHandoff | undefined;
+
+          if (
+            !handoff ||
+            handoff.token !== token ||
+            Date.now() - handoff.createdAt >
+              HANDOFF_EXPIRATION_MS
+          ) {
+            await chrome.storage.session.remove(key);
+            sendResponse(null);
+            return;
+          }
+
+          // One-time transfer: remove before responding.
+          await chrome.storage.session.remove(key);
+
+          sendResponse({
+            type: HANDOFF_RESPONSE,
+            token,
+            scan: handoff.scan,
+          });
+        },
+      ).catch((error) => {
+        console.error("Handoff retrieval failed:", error);
+        sendResponse(null);
+      });
+
+      return true;
+    }
+  },
 );
 
 console.log("Cookie Crumbs tracker collection active!");
