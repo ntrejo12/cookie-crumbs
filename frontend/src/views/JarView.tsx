@@ -5,6 +5,7 @@ import CrumbTrail, { TrailLegend } from "../components/CrumbTrail";
 import XRayPanel from "../components/XRayPanel";
 import { scoreLabel, type SiteScan } from "../data/mockScans";
 import PrivacyDetails from "../components/PrivacyDetails";
+import AIPrivacyDetective from "../components/AIPrivacyDetective";
 
 interface ViewProps {
   scan: SiteScan;
@@ -107,6 +108,7 @@ export default function JarView({ scan, selectedId, onSelect }: ViewProps) {
         <XRayPanel tracker={selected} loadedBy={loadedBy} onClose={() => onSelect(null)} />
       </section>
       <PrivacyDetails scan={scan} />
+      <AIPrivacyDetective scan={scan} />
     </div>
   );
 }
