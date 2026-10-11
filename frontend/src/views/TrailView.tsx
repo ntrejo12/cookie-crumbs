@@ -10,14 +10,6 @@ interface ViewProps {
 
 const card = "rounded-2xl border-2 border-crust bg-cream";
 
-/**
- * The oven from the mockup, drawn with CSS border-image: the knobs + label panel and the oven's
- * sides keep their proportions, and only the window (where the content sits) grows taller.
- * Numbers are the oven image's slice sizes in pixels (image is 998px wide).
- */
-const OVEN_W = 998;
-const OVEN = { top: 275, right: 41, bottom: 54, left: 40 };
-const cq = (n: number) => `${(n / OVEN_W) * 100}cqw`;
 
 function CategoryDot({ t }: { t: Tracker }) {
   return (
@@ -39,28 +31,13 @@ export default function TrailView({ scan, selectedId, onSelect }: ViewProps) {
   const toggle = (id: string) => onSelect(id === selectedId ? null : id);
 
   return (
-    <div className="relative [container-type:inline-size]">
-      {/* page title sits in the oven's label */}
-      <h1
-        className="absolute left-1/2 z-10 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap font-sans font-bold text-[#B27270]"
-        style={{ top: cq(114), fontSize: cq(34) }}
-      >
-        Crumb Trail
-      </h1>
-
-      <div
-        style={{
-          borderStyle: "solid",
-          borderWidth: `${cq(OVEN.top)} ${cq(OVEN.right)} ${cq(OVEN.bottom)} ${cq(OVEN.left)}`,
-          borderImageSource: "url(/crumbtrail/oven.png)",
-          borderImageSlice: `${OVEN.top} ${OVEN.right} ${OVEN.bottom} ${OVEN.left} fill`,
-          borderImageRepeat: "stretch",
-        }}
-      >
-        <div className="space-y-6 px-3 pb-6 pt-5 sm:px-6 sm:pt-6">
-          <p className="text-center text-chip">
-            Everyone {scan.domain} phoned home to. Click any crumb to X-ray it.
-          </p>
+    <div className="space-y-6">
+      <header>
+        <h1 className="font-serif text-3xl font-bold text-chip sm:text-4xl">Crumb Trail</h1>
+        <p className="mt-1 text-cocoa">
+          Everyone {scan.domain} phoned home to. Click any crumb to X-ray it.
+        </p>
+      </header>
 
       {/* What kind of crumbs + biggest droppers */}
       <section className="grid gap-4 lg:grid-cols-2">
@@ -170,8 +147,6 @@ export default function TrailView({ scan, selectedId, onSelect }: ViewProps) {
           <XRayPanel tracker={selected} loadedBy={loadedBy} onClose={() => onSelect(null)} />
         </div>
       </section>
-        </div>
-      </div>
     </div>
   );
 }

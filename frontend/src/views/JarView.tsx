@@ -1,4 +1,5 @@
 import CookieScore from "../components/CookieScore";
+import Oven from "../components/Oven";
 import CrumbTrail, { TrailLegend } from "../components/CrumbTrail";
 import XRayPanel from "../components/XRayPanel";
 import { scoreLabel, type SiteScan } from "../data/mockScans";
@@ -49,14 +50,15 @@ export default function JarView({ scan, selectedId, onSelect }: ViewProps) {
 
       {/* Crumb trail + X-Ray */}
       <section className="grid gap-4 xl:grid-cols-[1fr_320px]">
-        <div className={`${card} min-w-0 p-5 sm:p-6`}>
-          <h2 className="font-serif text-xl font-bold text-chip">The Crumb Trail</h2>
-          <p className="text-sm text-cocoa">Tap a crumb to see who it phones home to.</p>
+        <Oven title="The Crumb Trail">
+          <div className="px-3 pb-4 pt-4 sm:px-5">
+          <p className="text-center text-sm text-cocoa">Tap a crumb to see who it phones home to.</p>
           <div className="-mx-2 mt-2 overflow-x-auto px-2">
             <CrumbTrail scan={scan} selectedId={selectedId} onSelect={onSelect} />
           </div>
           <TrailLegend />
-        </div>
+          </div>
+        </Oven>
         <XRayPanel tracker={selected} loadedBy={loadedBy} onClose={() => onSelect(null)} />
       </section>
 
