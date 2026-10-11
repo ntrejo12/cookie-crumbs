@@ -1,4 +1,5 @@
 import { useState } from "react";
+import CrumbDivider from "../components/CrumbDivider";
 import { countByCategory, type Category, type SiteScan } from "../data/mockScans";
 
 /**
@@ -99,6 +100,7 @@ export default function TasteTestView({ scans }: { scans: SiteScan[] }) {
       <header className="text-center">
         <h1 className="font-serif text-3xl font-bold text-chip sm:text-4xl">Crumb Test: Which Site Is Crumbier?</h1>
         <p className="mt-1 text-cocoa">Pick two sites you've scanned and compare what they leave behind.</p>
+        <CrumbDivider className="mt-6" />
       </header>
 
       {/* The stage: fixed ratio, everything positioned with the mockup's coordinates */}
