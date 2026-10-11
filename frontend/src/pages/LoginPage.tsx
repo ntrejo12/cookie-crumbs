@@ -3,7 +3,7 @@ import { useState, type FormEvent } from "react";
 /**
  * Cookie Crumbs: Login + sign-up page ("Bake an account")
  * Page background = logo background (bg-crumbs-bg in index.css).
- * Frontend only: onLogin / onSignUp just receive the form values.
+ * The page owns validation and presentation; App supplies the Neon Auth actions.
  */
 
 // Deterministic pseudo-random so crumbs don't jump around between renders
@@ -47,8 +47,8 @@ const inputClass =
 
 interface LoginPageProps {
   mode?: "login" | "signup";
-  onLogin?: (values: { email: string; password: string; remember: boolean }) => void;
-  onSignUp?: (values: { name: string; email: string; password: string; remember: boolean }) => void;
+  onLogin?: (values: { email: string; password: string; remember: boolean }) => void | Promise<void>;
+  onSignUp?: (values: { name: string; email: string; password: string; remember: boolean }) => void | Promise<void>;
   /** switch between "Log in" and "Bake an account" */
   onSwitchMode?: () => void;
 }
@@ -62,21 +62,37 @@ export default function LoginPage({ mode = "login", onLogin, onSignUp, onSwitchM
   const [remember, setRemember] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
     if (signup) {
       if (!name || !email || !password || !confirm) return setError("Fill in every field to bake your account.");
       if (!email.includes("@")) return setError("That email doesn't look quite right.");
       if (password.length < 8) return setError("Use at least 8 characters for your password.");
       if (password !== confirm) return setError("Passwords don't match.");
+      setSubmitting(true);
       setError("");
-      onSignUp?.({ name, email, password, remember });
+      try {
+        await onSignUp?.({ name, email, password, remember });
+      } catch (submitError) {
+        setError(submitError instanceof Error ? submitError.message : "Unable to create your account.");
+      } finally {
+        setSubmitting(false);
+      }
       return;
     }
     if (!email || !password) return setError("Fill in both fields to open the jar.");
+    setSubmitting(true);
     setError("");
-    onLogin?.({ email, password, remember });
+    try {
+      await onLogin?.({ email, password, remember });
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : "Unable to log in.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const passwordField = (label: string, value: string, set: (v: string) => void, auto: string) => (
@@ -210,9 +226,10 @@ export default function LoginPage({ mode = "login", onLogin, onSignUp, onSwitchM
           <div className="mt-6 grid gap-3 sm:grid-cols-2 sm:gap-5">
             <button
               type="submit"
+              disabled={submitting}
               className="w-full rounded-full bg-chip py-3.5 text-base font-bold text-cream transition hover:brightness-125 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-dough/60 active:scale-[0.99]"
             >
-              {signup ? "Bake my account" : "Log in"}
+              {submitting ? "Opening..." : signup ? "Bake my account" : "Log in"}
             </button>
 
             <button

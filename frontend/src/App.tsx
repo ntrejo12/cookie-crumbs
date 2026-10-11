@@ -1,50 +1,39 @@
-import { useEffect, useState } from "react";
-import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
+import { startTransition, useEffect, useState } from "react";
+import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import type { User } from "./components/Sidebar";
 import Dashboard from "./pages/Dashboard";
 import LoginPage from "./pages/LoginPage";
 import type { SiteScan } from "./data/mockScans";
+import { neon } from "./lib/neon";
 import { getHandoffToken, receiveScan } from "./lib/receiveScan";
 import { toSiteScan } from "./lib/scanAdapter";
 
-/**
- * Frontend-only accounts for now: the signed-in user is remembered in this browser
- * ("Keep me logged in" = localStorage, otherwise only for this tab). Swap these for neon.auth later.
- */
-const USER_KEY = "cc-user";
-
-/**
- * Account used when the dashboard is opened from the extension.
- * Placeholder until the extension has a real login: change these to your own name/email for demos.
- */
-const EXTENSION_USER: User = { name: "Cookie Crumbs User", email: "you@cookiecrumbs.app" };
-
 /** Scans received from the extension, kept on this device so you can compare sites across visits. */
-const SCANS_KEY = "cc-scans";
+const SCANS_KEY_PREFIX = "cc-scans:";
 const MAX_SAVED_SCANS = 10;
+const PENDING_SCAN_KEY = "cc-pending-scan-token";
 
-function loadUser(): User | null {
+function loadPendingScanToken(): string | null {
   try {
-    const raw = localStorage.getItem(USER_KEY) ?? sessionStorage.getItem(USER_KEY);
-    return raw ? (JSON.parse(raw) as User) : null;
+    const token = getHandoffToken() ?? sessionStorage.getItem(PENDING_SCAN_KEY);
+    if (token) sessionStorage.setItem(PENDING_SCAN_KEY, token);
+    return token;
   } catch {
     return null;
   }
 }
 
-function saveUser(user: User | null, remember = true) {
+function clearPendingScanToken() {
   try {
-    localStorage.removeItem(USER_KEY);
-    sessionStorage.removeItem(USER_KEY);
-    if (user) (remember ? localStorage : sessionStorage).setItem(USER_KEY, JSON.stringify(user));
+    sessionStorage.removeItem(PENDING_SCAN_KEY);
   } catch {
-    /* storage blocked: you'll just be logged out on refresh */
+    /* storage blocked: the URL token remains available for this navigation */
   }
 }
 
-function loadScans(): SiteScan[] {
+function loadScans(userId: string): SiteScan[] {
   try {
-    const raw = localStorage.getItem(SCANS_KEY);
+    const raw = localStorage.getItem(`${SCANS_KEY_PREFIX}${userId}`);
     const parsed = raw ? JSON.parse(raw) : [];
     return Array.isArray(parsed) ? (parsed as SiteScan[]) : [];
   } catch {
@@ -52,10 +41,11 @@ function loadScans(): SiteScan[] {
   }
 }
 
-function saveScans(scans: SiteScan[]) {
+function saveScans(userId: string, scans: SiteScan[]) {
   try {
-    if (scans.length) localStorage.setItem(SCANS_KEY, JSON.stringify(scans.slice(0, MAX_SAVED_SCANS)));
-    else localStorage.removeItem(SCANS_KEY);
+    const key = `${SCANS_KEY_PREFIX}${userId}`;
+    if (scans.length) localStorage.setItem(key, JSON.stringify(scans.slice(0, MAX_SAVED_SCANS)));
+    else localStorage.removeItem(key);
   } catch {
     /* storage blocked: scans just won't survive a refresh */
   }
@@ -68,36 +58,64 @@ const nameFromEmail = (email: string) => {
 
 function App() {
   const navigate = useNavigate();
-  const [user, setUser] = useState<User | null>(loadUser);
-  const [scans, setScans] = useState<SiteScan[]>(loadScans);
-  // Opened from the extension's "Open The Cookie Jar" button (URL has #scan=<token>)
-  const [loadingScan, setLoadingScan] = useState(getHandoffToken() !== null);
+  const location = useLocation();
+  const session = neon.auth.useSession();
+  const authUser = session.data?.user ?? null;
+  const user: User | null = authUser
+    ? { name: authUser.name || nameFromEmail(authUser.email), email: authUser.email }
+    : null;
+  const [pendingScanToken, setPendingScanToken] = useState(loadPendingScanToken);
+  const [scans, setScans] = useState<SiteScan[]>([]);
+  const [scansUserId, setScansUserId] = useState<string | null>(null);
   const [handoffError, setHandoffError] = useState<string | null>(null);
 
-  useEffect(() => saveScans(scans), [scans]);
+  useEffect(() => {
+    if (session.isPending) return;
+    startTransition(() => {
+      if (!authUser) {
+        setScans([]);
+        setScansUserId(null);
+        return;
+      }
+      setScans(loadScans(authUser.id));
+      setScansUserId(authUser.id);
+    });
+  }, [authUser, session.isPending]);
 
-  const signIn = (u: User, remember: boolean) => {
-    saveUser(u, remember);
-    setUser(u);
+  useEffect(() => {
+    if (authUser && scansUserId === authUser.id) saveScans(authUser.id, scans);
+  }, [authUser, scans, scansUserId]);
+
+  const signIn = async ({ email, password, remember }: { email: string; password: string; remember: boolean }) => {
+    const result = await neon.auth.signIn.email({ email, password, rememberMe: remember });
+    if (result.error) throw new Error(result.error.message);
+    const currentSession = await neon.auth.getSession();
+    if (!currentSession.data?.user) throw new Error("Your session could not be started. Please try again.");
     navigate("/dashboard");
   };
 
-  const logOut = () => {
-    saveUser(null);
-    setUser(null);
+  const signUp = async ({ name, email, password }: { name: string; email: string; password: string; remember: boolean }) => {
+    const result = await neon.auth.signUp.email({ name, email, password });
+    if (result.error) throw new Error(result.error.message);
+    const currentSession = await neon.auth.getSession();
+    if (!currentSession.data?.user) {
+      throw new Error("Your account was created. Check your email to verify it, then log in.");
+    }
+    navigate("/dashboard");
+  };
+
+  const logOut = async () => {
+    const result = await neon.auth.signOut();
+    if (result.error) {
+      setHandoffError(result.error.message ?? "Unable to log out. Please try again.");
+      return;
+    }
     navigate("/");
   };
 
-  const updateUser = (u: User) => {
-    const remembered = (() => {
-      try {
-        return localStorage.getItem(USER_KEY) !== null;
-      } catch {
-        return true;
-      }
-    })();
-    saveUser(u, remembered);
-    setUser(u);
+  const updateUser = async (nextUser: User) => {
+    const result = await neon.auth.updateUser({ name: nextUser.name });
+    if (result.error) setHandoffError(result.error.message ?? "Unable to update your account.");
   };
 
   // Page background = the logo's background, read from the logo exactly as the browser draws it
@@ -121,42 +139,53 @@ function App() {
 
   // Receive a real scan handed over by the extension
   useEffect(() => {
-    const token = getHandoffToken();
-    if (!token) return;
+    if (session.isPending || !authUser || !pendingScanToken) return;
+    if (location.pathname !== "/dashboard") {
+      navigate(`/dashboard#scan=${pendingScanToken}`, { replace: true });
+      return;
+    }
 
     let cancelled = false;
 
-    void receiveScan(token)
+    void receiveScan(pendingScanToken)
       .then((shared) => {
         if (cancelled) return;
         const nextScan = toSiteScan(shared);
+        clearPendingScanToken();
+        setPendingScanToken(null);
         setScans((previous) => [nextScan, ...previous.filter((scan) => scan.domain !== nextScan.domain)]);
-
-        // You're already in the extension, so you're signed in here too
-        if (!loadUser()) {
-          saveUser(EXTENSION_USER, true);
-          setUser(EXTENSION_USER);
-        }
         navigate(`/dashboard?site=${encodeURIComponent(nextScan.domain)}`, { replace: true });
       })
       .catch((error: unknown) => {
         if (cancelled) return;
-        setHandoffError(error instanceof Error ? error.message : "Unable to import the scan.");
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingScan(false);
+        clearPendingScanToken();
+        setPendingScanToken(null);
+        setHandoffError(
+          error instanceof Error && error.message.includes("Could not receive the scan")
+            ? "This scan expired while you were signing in. Please scan again."
+            : error instanceof Error
+              ? error.message
+              : "Unable to import the scan. Please scan again.",
+        );
       });
 
     return () => {
       cancelled = true;
     };
-  }, [navigate]);
+  }, [authUser, location.pathname, navigate, pendingScanToken, session.isPending]);
 
-  if (loadingScan) {
+  useEffect(() => {
+    if (session.isPending || authUser || !pendingScanToken || location.pathname === "/" || location.pathname === "/signup") return;
+    navigate("/", { replace: true });
+  }, [authUser, location.pathname, navigate, pendingScanToken, session.isPending]);
+
+  const loadingScan = Boolean(authUser && pendingScanToken && location.pathname === "/dashboard");
+
+  if (session.isPending || loadingScan) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-crumbs-bg p-6 font-sans">
         <img src="/logo.png" alt="" className="h-24 w-auto motion-safe:animate-pulse" />
-        <p className="font-serif text-2xl font-bold text-cream">Opening your cookie jar...</p>
+        <p className="font-serif text-2xl font-bold text-cream">{loadingScan ? "Opening your cookie jar..." : "Checking your cookie jar..."}</p>
       </main>
     );
   }
@@ -179,7 +208,7 @@ function App() {
           element={
             <LoginPage
               mode="login"
-              onLogin={({ email, remember }) => signIn({ name: nameFromEmail(email), email }, remember)}
+              onLogin={signIn}
               onSwitchMode={() => navigate("/signup")}
             />
           }
@@ -189,7 +218,7 @@ function App() {
           element={
             <LoginPage
               mode="signup"
-              onSignUp={({ name, email, remember }) => signIn({ name, email }, remember)}
+              onSignUp={signUp}
               onSwitchMode={() => navigate("/")}
             />
           }
@@ -197,16 +226,20 @@ function App() {
         <Route
           path="/dashboard"
           element={
-            <Dashboard
-              user={user}
-              scans={scans}
-              onLogout={logOut}
-              onLogin={() => navigate("/")}
-              onSignUp={() => navigate("/signup")}
-              onUpdateUser={updateUser}
-              onDeleteAccount={logOut}
-              onClearHistory={() => setScans([])}
-            />
+            user ? (
+              <Dashboard
+                user={user}
+                scans={scans}
+                onLogout={logOut}
+                onLogin={() => navigate("/")}
+                onSignUp={() => navigate("/signup")}
+                onUpdateUser={updateUser}
+                onDeleteAccount={logOut}
+                onClearHistory={() => setScans([])}
+              />
+            ) : (
+              <Navigate to="/" replace />
+            )
           }
         />
         <Route path="*" element={<Navigate to="/" replace />} />
