@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.routes import health, scan, tracker
+from app.routes import health, scan, tracker, classify, preferences, history
 
 app = FastAPI(
     title="Cookie Crumbs API",
@@ -11,6 +11,9 @@ app = FastAPI(
 app.include_router(health.router)
 app.include_router(scan.router)
 app.include_router(tracker.router)
+app.include_router(classify.router)
+app.include_router(preferences.router)
+app.include_router(history.router)
 
 @app.get("/", tags=["Root"])
 def root():
