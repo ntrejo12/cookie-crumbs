@@ -15,7 +15,7 @@ from app.services.privacy_knowledge import (
 logger = logging.getLogger("cookie-crumbs.ai")
 
 MAX_TRACKERS_TO_MODEL = 15
-_cache: dict[str, AIAnalysisResponse] = {}   # saves free-tier quota and speeds up demos
+_cache: dict[str, AIAnalysisResponse] = {}  
 
 SYSTEM_PROMPT = """You are Cookie Crumbs' privacy guide. You explain website tracking to everyday people in plain, calm English.
 
@@ -118,8 +118,6 @@ def _template(req: AIAnalysisRequest, facts: dict, knowledge: dict) -> AIAnalysi
     )
 
 
-# ---------- Hugging Face model ----------
-
 def _parse_json(text: str) -> dict:
     text = re.sub(r"^```(?:json)?|```$", "", text.strip(), flags=re.MULTILINE).strip()
     start, end = text.find("{"), text.rfind("}")
@@ -153,8 +151,6 @@ def _call_model(facts: dict, knowledge: dict) -> dict:
     )
     return _parse_json(resp.choices[0].message.content)
 
-
-# ---------- public entry point ----------
 
 def analyze(req: AIAnalysisRequest) -> AIAnalysisResponse:
     facts = build_facts(req)

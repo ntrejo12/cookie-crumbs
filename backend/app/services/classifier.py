@@ -1,4 +1,3 @@
-# app/services/classifier.py
 import json
 import os
 from functools import lru_cache
@@ -11,7 +10,6 @@ from app.schemas.ai import ObservedDomain, TrackerClassification
 
 DATA_PATH = Path(__file__).resolve().parent.parent / "data" / "tracker_domains.json"
 
-# offline-safe: bundled public-suffix snapshot, no network fetch
 _extract = tldextract.TLDExtract(suffix_list_urls=())
 
 CATEGORY_RISK = {
@@ -53,13 +51,13 @@ def _from_known(base: str) -> TrackerClassification | None:
     cat = entry["category"]
     return TrackerClassification(
         name=base,
-        company=entry.get("company"),            # optional, not in the file yet
+        company=entry.get("company"),           
         category=cat,
         risk_level=CATEGORY_RISK.get(cat, "unknown"),
         confidence=1.0,
         source="known_list",
         verified=True,
-        explanation=entry.get("description"),    # reuse the file's description
+        explanation=entry.get("description"),   
     )
 
 def _from_heuristics(domain: str) -> TrackerClassification | None:
