@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { SiteScan } from "../data/mockScans";
 import {
   analyzeSiteWithAI,
@@ -8,19 +8,30 @@ import {
 interface Props {
   scan: SiteScan;
   authenticatedHeaders?: Record<string, string>;
+  onAnalysisComplete?: (
+    analysis: AIAnalysisResponse,
+  ) => void;
 }
 
 export default function AIPrivacyDetective({
   scan,
   authenticatedHeaders,
+  onAnalysisComplete,
 }: Props) {
   const [result, setResult] =
     useState<AIAnalysisResponse | null>(null);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Clear old AI results when the selected website changes.
+  useEffect(() => {
+    setResult(null);
+    setError(null);
+  }, [scan]);
+
   async function handleAnalyze() {
-    if (!authenticatedHeaders) return;
+    if (!authenticatedHeaders || loading) return;
 
     setLoading(true);
     setError(null);
@@ -31,12 +42,14 @@ export default function AIPrivacyDetective({
         scan,
         authenticatedHeaders,
       );
+
       setResult(analysis);
+      onAnalysisComplete?.(analysis);
     } catch (err) {
       setError(
         err instanceof Error
           ? err.message
-          : "Unable to analyze this scan.",
+          : "Unable to analyze this website.",
       );
     } finally {
       setLoading(false);
@@ -50,8 +63,7 @@ export default function AIPrivacyDetective({
       </h2>
 
       <p className="mt-2 text-sm text-cocoa">
-        Get an explanation of the tracking activity
-        observed on this website.
+        Analyze the domains observed during this scan and learn more about their possible privacy implications.
       </p>
 
       <button
@@ -65,8 +77,7 @@ export default function AIPrivacyDetective({
 
       {!authenticatedHeaders && (
         <p className="mt-3 text-sm text-cocoa">
-          Verified account access is required before
-          cloud AI analysis can be enabled.
+          AI analysis will be available after verified authentication is connected.
         </p>
       )}
 
@@ -75,6 +86,7 @@ export default function AIPrivacyDetective({
           {error}
         </p>
       )}
+
       {result && (
         <div className="mt-5 space-y-4">
           <p className="text-xs font-semibold uppercase text-crust">
@@ -114,52 +126,10 @@ export default function AIPrivacyDetective({
           )}
 
           {result.tracker_classifications.length > 0 && (
-            <div>
-              <h3 className="font-bold text-chip">
-                Tracker Classification Details
-              </h3>
-
-              <div className="mt-3 space-y-3">
-                {result.tracker_classifications.map((tracker) => (
-                  <div
-                    key={tracker.name}
-                    className="rounded-xl bg-parchment p-3"
-                  >
-                    <p className="break-all font-semibold text-chip">
-                      {tracker.name}
-                    </p>
-
-                    <p className="mt-1 text-sm text-cocoa">
-                      Category: {tracker.category ?? "Unknown"}
-                    </p>
-
-                    <p className="text-sm text-cocoa">
-                      Owner: {tracker.company ?? "Not verified"}
-                    </p>
-
-                    <p className="text-sm text-cocoa">
-                      Classification:{" "}
-                      {tracker.verified
-                        ? "Verified against known data"
-                        : "Unverified estimate"}
-                    </p>
-
-                    {tracker.confidence !== null && (
-                      <p className="text-sm text-cocoa">
-                        Reported confidence:{" "}
-                        {Math.round(tracker.confidence * 100)}%
-                      </p>
-                    )}
-
-                    {tracker.explanation && (
-                      <p className="mt-2 text-sm text-chip">
-                        {tracker.explanation}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
+            <p className="rounded-xl bg-parchment p-3 text-sm text-chip">
+              {result.tracker_classifications.length} domain classifications received. Select a crumb
+              in the graph above to inspect its details in Privacy X-Ray.
+            </p>
           )}
         </div>
       )}

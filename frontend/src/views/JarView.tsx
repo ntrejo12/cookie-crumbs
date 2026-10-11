@@ -6,6 +6,8 @@ import XRayPanel from "../components/XRayPanel";
 import { scoreLabel, type SiteScan } from "../data/mockScans";
 import PrivacyDetails from "../components/PrivacyDetails";
 import AIPrivacyDetective from "../components/AIPrivacyDetective";
+import type { AIAnalysisResponse } from "../lib/aiApi";
+import { findTrackerClassification } from "../lib/trackerClassification";
 
 interface ViewProps {
   scan: SiteScan;
@@ -19,9 +21,29 @@ const GRAPH_MAX = 500; // the graph's original size
 const GRAPH_MIN = 220; // never squash it smaller than this (short screens scroll a little instead)
 
 /** Cookie jar: the overview for one site. */
-export default function JarView({ scan, selectedId, onSelect }: ViewProps) {
-  const selected = scan.trackers.find((t) => t.id === selectedId);
-  const loadedBy = selected?.via ? scan.trackers.find((t) => t.id === selected.via)?.domain : undefined;
+export default function JarView({scan, selectedId, onSelect,}: ViewProps) {
+  const [aiResult, setAiResult] = useState<AIAnalysisResponse | null>(null);
+
+  // Keep analysis associated with the exact scan object.
+  // Prevent results from another website or scan being shown.
+  const [analyzedScan, setAnalyzedScan] = useState<SiteScan | null>(null);
+
+  const selected = scan.trackers.find((tracker) => tracker.id === selectedId,);
+
+  const loadedBy = selected?.via ? scan.trackers.find((tracker) => tracker.id === selected.via,
+  )?.domain: undefined;
+
+  const classifications = analyzedScan === scan ? aiResult?.tracker_classifications ?? []: [];
+
+  const selectedClassification = selected ? findTrackerClassification(
+    selected.domain,
+    classifications,
+  ): undefined;
+
+  function handleAIAnalysisComplete(analysis: AIAnalysisResponse,) {
+    setAiResult(analysis);
+    setAnalyzedScan(scan);
+  }
 
   // Size the graph so the whole oven fits on screen without scrolling
   const ovenRef = useRef<HTMLDivElement>(null);
@@ -105,10 +127,10 @@ export default function JarView({ scan, selectedId, onSelect }: ViewProps) {
           </div>
         </Oven>
         </div>
-        <XRayPanel tracker={selected} loadedBy={loadedBy} onClose={() => onSelect(null)} />
+        <XRayPanel tracker={selected} classification={selectedClassification} loadedBy={loadedBy} onClose={() => onSelect(null)}/>
       </section>
       <PrivacyDetails scan={scan} />
-      <AIPrivacyDetective scan={scan} />
+      <AIPrivacyDetective scan={scan} onAnalysisComplete={handleAIAnalysisComplete}/>
     </div>
   );
 }
