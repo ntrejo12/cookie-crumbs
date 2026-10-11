@@ -28,7 +28,7 @@ function verdict(trackers: number) {
   if (trackers <= 3) return "Not too crumby!";
   if (trackers <= 9) return "A little crumby...";
   if (trackers <= 19) return "Pretty crumby!";
-  return "Crumbs everywhere!";
+  return "So many crumbs!";
 }
 
 function toStats(scan: ScanResponse): Stats {
@@ -199,7 +199,7 @@ export default function PopupApp() {
           <img src="/popup/bubble.png" alt="" className="w-full select-none" draggable={false} />
           <p
             aria-live="polite"
-            className={`absolute bottom-[26%] left-[10%] right-[4%] top-[4%] flex items-center justify-center text-center font-hand text-[14px] font-bold leading-none text-black ${
+            className={`absolute bottom-[20%] left-[8%] right-[4%] top-[6%] flex items-center justify-center text-center font-hand text-[16px] font-bold leading-[0.95] text-black ${
               loading ? "motion-safe:animate-pulse" : ""
             }`}
           >
