@@ -1,0 +1,3 @@
+cookiecrumbs.club {
+    reverse_proxy frontend:80
+}

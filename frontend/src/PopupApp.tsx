@@ -9,7 +9,6 @@ import {
   WEBSITE_ORIGIN,
 } from "./lib/handoff";
 
-const WEBSITE_URL = "http://localhost:5173/";
 
 interface TabScan {
   website: string;
