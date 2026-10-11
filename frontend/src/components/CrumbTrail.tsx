@@ -6,10 +6,8 @@ const SITE_ID = "__site__";
 const RING1 = { rx: 255, ry: 150 }; // trackers the site loads directly
 const RING2 = { rx: 380, ry: 225 }; // trackers loaded by other trackers
 
-// the site in the middle is drawn as a cookie
-const COOKIE_SVG = `data:image/svg+xml;utf8,${encodeURIComponent(
-  `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="#E3A857" stroke="#BC7A2E" stroke-width="5"/><circle cx="34" cy="34" r="5" fill="#3D2618"/><circle cx="64" cy="30" r="5" fill="#3D2618"/><circle cx="70" cy="58" r="5" fill="#3D2618"/><circle cx="44" cy="66" r="5" fill="#3D2618"/><circle cx="27" cy="54" r="4" fill="#3D2618"/></svg>`,
-)}`;
+// the site in the middle is a chocolate chip cookie (same style as the extension cookies)
+const COOKIE_IMG = "/popup/cookie-chocchip.svg";
 
 // unknown crumbs get a "?" in the middle
 const QUESTION_SVG = `data:image/svg+xml;utf8,${encodeURIComponent(
@@ -19,26 +17,34 @@ const QUESTION_SVG = `data:image/svg+xml;utf8,${encodeURIComponent(
 const nodeSize = (requests: number) => Math.round(Math.min(52, 18 + Math.sqrt(requests) * 5.2));
 
 /** Same ring layout as the mockup: direct trackers on the inner ring, trackers-of-trackers further out. */
-function positions(trackers: Tracker[]) {
+function positions(trackers: Tracker[], yScale = 1) {
   const pos = new Map<string, { x: number; y: number; angle: number }>();
   const roots = trackers.filter((t) => !t.via);
   roots.forEach((t, i) => {
     const angle = -Math.PI / 2 + (i / roots.length) * Math.PI * 2;
-    pos.set(t.id, { x: RING1.rx * Math.cos(angle), y: RING1.ry * Math.sin(angle), angle });
+    pos.set(t.id, { x: RING1.rx * Math.cos(angle), y: RING1.ry * yScale * Math.sin(angle), angle });
   });
   roots.forEach((root) => {
     const kids = trackers.filter((t) => t.via === root.id);
     const p = pos.get(root.id)!;
     kids.forEach((k, j) => {
       const angle = p.angle + (j - (kids.length - 1) / 2) * 0.32;
-      pos.set(k.id, { x: RING2.rx * Math.cos(angle), y: RING2.ry * Math.sin(angle), angle });
+      pos.set(k.id, { x: RING2.rx * Math.cos(angle), y: RING2.ry * yScale * Math.sin(angle), angle });
     });
   });
   return pos;
 }
 
-function toElements(scan: SiteScan): ElementDefinition[] {
-  const pos = positions(scan.trackers);
+/** Flatten the rings a bit when the graph area is wide and short, so it fills the space instead of shrinking. */
+const LAYOUT_ASPECT = 1.76; // width / height of the default layout, labels included
+function layoutYScale(el: HTMLElement | null) {
+  if (!el || !el.clientHeight) return 1;
+  const aspect = el.clientWidth / el.clientHeight;
+  return Math.max(0.55, Math.min(1, LAYOUT_ASPECT / aspect));
+}
+
+function toElements(scan: SiteScan, yScale = 1): ElementDefinition[] {
+  const pos = positions(scan.trackers, yScale);
   const els: ElementDefinition[] = [
     { group: "nodes", data: { id: SITE_ID, label: scan.domain }, position: { x: 0, y: 0 }, classes: "site" },
   ];
@@ -64,10 +70,12 @@ interface CrumbTrailProps {
   scan: SiteScan;
   selectedId: string | null;
   onSelect: (id: string | null) => void;
+  /** Graph height in px. Leave out for the default (340px on phones, 500px otherwise). */
+  height?: number;
 }
 
 /** The tracker graph (Cytoscape.js): the site is the cookie in the middle, every crumb is a domain it phoned home to. */
-export default function CrumbTrail({ scan, selectedId, onSelect }: CrumbTrailProps) {
+export default function CrumbTrail({ scan, selectedId, onSelect, height }: CrumbTrailProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<Core | null>(null);
   const onSelectRef = useRef(onSelect);
@@ -81,7 +89,7 @@ export default function CrumbTrail({ scan, selectedId, onSelect }: CrumbTrailPro
 
     const cy = cytoscape({
       container: containerRef.current,
-      elements: toElements(scan),
+      elements: toElements(scan, layoutYScale(containerRef.current)),
       layout: { name: "preset" },
       // pinch-zoom on phones; on desktop the wheel would hijack page scrolling, so use the buttons
       userZoomingEnabled: window.matchMedia("(pointer: coarse)").matches,
@@ -133,7 +141,7 @@ export default function CrumbTrail({ scan, selectedId, onSelect }: CrumbTrailPro
             width: 92,
             height: 92,
             "background-opacity": 0,
-            "background-image": COOKIE_SVG,
+            "background-image": COOKIE_IMG,
             "background-fit": "contain",
             "border-width": 0,
             "font-size": 15,
@@ -215,7 +223,7 @@ export default function CrumbTrail({ scan, selectedId, onSelect }: CrumbTrailPro
       cy.destroy();
       cyRef.current = null;
     };
-  }, [scan]);
+  }, [scan, height]);
 
   // highlight the picked crumb, its parent and its children; fade the rest
   useEffect(() => {
@@ -243,7 +251,9 @@ export default function CrumbTrail({ scan, selectedId, onSelect }: CrumbTrailPro
     <div className="relative">
       <div
         ref={containerRef}
-        className="h-[340px] w-full sm:h-[500px]"
+        className={height ? "w-full" : "h-[340px] w-full sm:h-[500px]"}
+        style={height ? { height } : undefined}
+        data-crumb-graph
         role="img"
         aria-label={`Tracker graph for ${scan.domain}: ${scan.trackers.length} trackers. Use the list below the graph to inspect each one.`}
       />
@@ -276,7 +286,7 @@ export default function CrumbTrail({ scan, selectedId, onSelect }: CrumbTrailPro
 
 /** Small key under the graph */
 export function TrailLegend() {
-  const items = ["advertising", "analytics", "social", "fingerprinting"] as const;
+  const items = ["advertising", "analytics", "social", "fingerprint"] as const;
   return (
     <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-cocoa">
       {items.map((c) => (
@@ -286,7 +296,7 @@ export function TrailLegend() {
         </span>
       ))}
       <span className="flex items-center gap-1.5">
-        <span className="h-3 w-3 rounded-full border-2 border-dashed border-[#1E1209] bg-[#C9B697]" />
+        <span className="h-3 w-3 rounded-full border-2 border-dashed border-[#1E1209] bg-[#BDBDBD]" />
         Not on tracker list (AI guess)
       </span>
       <span>Bigger crumb = more requests · Drag to move · Pinch or use + to zoom</span>
