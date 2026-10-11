@@ -10,7 +10,8 @@ export default defineManifest({
     "webRequest",
     "cookies",
     "storage",
-    "tabs"
+    "tabs",
+    "contentSettings",
   ],
   host_permissions: [
     "http://*/*",

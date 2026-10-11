@@ -1,4 +1,3 @@
-
 from collections import Counter
 from fastapi import APIRouter
 from app.schemas.scan import ScanRequest, ScanResponse
@@ -37,4 +36,6 @@ def analyze_scan(scan: ScanRequest):
         permission_count=scan.permission_count,
         trackers=trackers,
         category_counts=category_counts,
+        cookie_analysis=scan.cookies.analysis,
+        permissions=scan.permissions,
     )
