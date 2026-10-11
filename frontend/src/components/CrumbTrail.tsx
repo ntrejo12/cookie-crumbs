@@ -284,7 +284,7 @@ export function TrailLegend() {
         </span>
       ))}
       <span className="flex items-center gap-1.5">
-        <span className="h-3 w-3 rounded-full border-2 border-dashed border-[#1E1209] bg-[#F6C090]" />
+        <span className="h-3 w-3 rounded-full border-2 border-dashed border-[#1E1209] bg-[#BDBDBD]" />
         Not on tracker list (AI guess)
       </span>
       <span>Bigger crumb = more requests · Drag to move · Pinch or use + to zoom</span>

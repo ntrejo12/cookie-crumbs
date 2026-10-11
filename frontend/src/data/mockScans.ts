@@ -9,12 +9,12 @@ export type KnownCategory = Exclude<Category, "unknown">;
 export const CATEGORY_META: Record<Category, { label: string; color: string; why: string }> = {
   advertising: {
     label: "Advertising",
-    color: "#F0A8A2", // pink frosting (extension)
+    color: "#C6E3AA", // green frosting (extension)
     why: "Builds a profile of the sites you visit so ads can follow you around the web.",
   },
   analytics: {
     label: "Analytics",
-    color: "#C6E3AA", // green frosting (extension)
+    color: "#F0A8A2", // pink frosting (extension)
     why: "Counts your visits, clicks and scrolling so the site can see what people do.",
   },
   social: {
@@ -24,12 +24,12 @@ export const CATEGORY_META: Record<Category, { label: string; color: string; why
   },
   fingerprint: {
     label: "Fingerprint",
-    color: "#9068F0", // purple sprinkle (extension)
+    color: "#F2C08F", // peach (crumb test mockup)
     why: "Recognizes your device from its settings, with no cookie needed. Clearing cookies won't stop it.",
   },
   unknown: {
     label: "Unknown",
-    color: "#F6C090", // cookie rim (extension), drawn dashed
+    color: "#BDBDBD", // gray (crumb test mockup), drawn dashed
     why: "This domain isn't on the known tracker list, so we can't say for sure what it does.",
   },
 };
