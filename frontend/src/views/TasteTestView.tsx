@@ -62,23 +62,24 @@ function SitePickerText({
 }
 
 export default function TasteTestView({ scans }: { scans: SiteScan[] }) {
-  const [leftDomain, setLeftDomain] = useState(scans[1]?.domain ?? scans[0].domain);
-  const [rightDomain, setRightDomain] = useState(scans[2]?.domain ?? scans[0].domain);
+  const [leftDomain, setLeftDomain] = useState(scans[0].domain);
+  const [rightDomain, setRightDomain] = useState(scans[1]?.domain ?? scans[0].domain);
   const left = scans.find((s) => s.domain === leftDomain) ?? scans[0];
   const right = scans.find((s) => s.domain === rightDomain) ?? scans[0];
   const leftCounts = countByCategory(left.trackers);
   const rightCounts = countByCategory(right.trackers);
+  const known = (scan: SiteScan) => scan.trackers.filter((t) => t.known).length;
 
   // the "winner" spot in the mockup: who's crumbier, between the two titles
   const winner =
     left.domain === right.domain
       ? { title: "Pick two different sites", sub: "" }
-      : left.trackers.length === right.trackers.length
-        ? { title: "It's a tie!", sub: "Same number of trackers" }
+      : known(left) === known(right)
+        ? { title: "It's a tie!", sub: "Same number of known trackers" }
         : (() => {
-            const [more, less] = left.trackers.length > right.trackers.length ? [left, right] : [right, left];
-            const ratio = (more.trackers.length / Math.max(1, less.trackers.length)).toFixed(1);
-            return { title: `${more.domain} is crumbier`, sub: `${ratio}x the trackers` };
+            const [more, less] = known(left) > known(right) ? [left, right] : [right, left];
+            const ratio = (known(more) / Math.max(1, known(less))).toFixed(1);
+            return { title: `${more.domain} is crumbier`, sub: `${ratio}x the known trackers` };
           })();
 
   const header = (n: 1 | 2, scan: SiteScan, set: (d: string) => void, cx: number, top: number) => (
@@ -90,7 +91,7 @@ export default function TasteTestView({ scans }: { scans: SiteScan[] }) {
         <SitePickerText scans={scans} value={scan.domain} onChange={set} label={`Cookie ${n} website`} />
       </div>
       <p className="font-hand leading-tight text-chip" style={{ fontSize: fs(19) }}>
-        {scan.trackers.length} trackers, {scan.cookies} cookies
+        {known(scan)} known trackers, {scan.cookies} cookies
       </p>
     </div>
   );

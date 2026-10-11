@@ -67,7 +67,7 @@ export default function XRayPanel({ tracker, loadedBy, onClose }: XRayPanelProps
           </span>
         </Row>
         <Row label="Requests observed">{tracker.requests}</Row>
-        <Row label="Cookies set">{tracker.cookies}</Row>
+        <Row label="Cookies set">{tracker.cookies ?? "Not measured"}</Row>
         <Row label="On known tracker list">
           {tracker.known ? <span className="text-[#3E7A3A]">Yes</span> : <span className="text-ad">No</span>}
         </Row>

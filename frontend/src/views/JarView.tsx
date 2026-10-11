@@ -43,11 +43,17 @@ export default function JarView({ scan, selectedId, onSelect }: ViewProps) {
     };
   }, []);
 
+  const knownTrackers = scan.trackers.filter((t) => t.known);
+
   const stats = [
-    { label: "Cookies", value: scan.cookies },
-    { label: "Trackers", value: scan.trackers.length },
+    { label: "Page-accessible cookies", value: scan.cookies },
+    { label: "Known trackers", value: knownTrackers.length },
     { label: "3rd-party requests", value: scan.thirdPartyRequests },
-    { label: "Permissions", value: scan.permissions.length, hint: scan.permissions.join(", ") || "None requested" },
+    {
+      label: "Permissions",
+      value: scan.permissions?.length ?? "N/A",
+      hint: scan.permissions?.join(", ") || "Not measured yet",
+    },
   ];
 
   return (
@@ -58,7 +64,10 @@ export default function JarView({ scan, selectedId, onSelect }: ViewProps) {
         <div className="min-w-0">
           <h1 className="break-all font-serif text-3xl font-bold text-chip sm:text-4xl">{scan.domain}</h1>
           <p className="mt-1 text-cocoa">
-            Crumb score {scan.score}: {scoreLabel(scan.score).toLowerCase()}. {scan.trackers.length} trackers followed you here.
+            {scan.score === null
+              ? "Crumb Score pending. "
+              : `Crumb score ${scan.score}: ${scoreLabel(scan.score).toLowerCase()}. `}
+            {knownTrackers.length} known trackers identified in observed requests.
           </p>
         </div>
       </header>

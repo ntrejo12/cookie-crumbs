@@ -26,7 +26,7 @@ const categoryName = (t: Tracker) => (t.category === "unknown" ? "Unconfirmed" :
 export default function TrailView({ scan, selectedId, onSelect }: ViewProps) {
   const selected = scan.trackers.find((t) => t.id === selectedId);
   const loadedBy = selected?.via ? scan.trackers.find((t) => t.id === selected.via)?.domain : undefined;
-  const topDroppers = [...scan.trackers].sort((a, b) => b.cookies - a.cookies).slice(0, 5);
+  const topDroppers = [...scan.trackers].sort((a, b) => b.requests - a.requests).slice(0, 5);
   const rows = [...scan.trackers].sort((a, b) => b.requests - a.requests);
   const toggle = (id: string) => onSelect(id === selectedId ? null : id);
 
@@ -49,7 +49,7 @@ export default function TrailView({ scan, selectedId, onSelect }: ViewProps) {
 
         <div className={`${card} p-5 sm:p-6`}>
           <h2 className="font-serif text-xl font-bold text-chip">Biggest Crumb Droppers</h2>
-          <p className="mb-3 text-sm text-cocoa">The domains that left the most cookies.</p>
+          <p className="mb-3 text-sm text-cocoa">The domains that phoned home the most.</p>
           <ul className="divide-y divide-line">
             {topDroppers.map((t) => (
               <li key={t.id}>
@@ -71,7 +71,7 @@ export default function TrailView({ scan, selectedId, onSelect }: ViewProps) {
                       </span>
                     </span>
                   </span>
-                  <span className="shrink-0 text-sm font-bold tabular-nums text-chip">{t.cookies} cookies</span>
+                  <span className="shrink-0 text-sm font-bold tabular-nums text-chip">{t.requests} requests</span>
                 </button>
               </li>
             ))}
@@ -124,7 +124,7 @@ export default function TrailView({ scan, selectedId, onSelect }: ViewProps) {
                         </span>
                       </td>
                       <td className="px-3 py-3 text-right tabular-nums text-chip">{t.requests}</td>
-                      <td className="px-3 py-3 text-right tabular-nums text-chip">{t.cookies}</td>
+                      <td className="px-3 py-3 text-right tabular-nums text-chip">{t.cookies ?? "N/A"}</td>
                       <td className="px-5 py-3 sm:px-6">
                         {t.known ? (
                           <span className="text-[#3E7A3A]">Known</span>

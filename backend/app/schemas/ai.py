@@ -2,9 +2,10 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.schemas.scan import ObservedDomain
 
 RiskLevel = Literal["low", "medium", "high", "unknown"]
-
+Source = Literal["known_list", "model", "heuristic"]
 
 class TrackerClassification(BaseModel):
     name: str
@@ -26,3 +27,24 @@ class AIAnalysisResponse(BaseModel):
     risk_summary: str | None = None
     recommendations: list[str] = Field(default_factory=list)
     tracker_classifications: list[TrackerClassification] = Field(default_factory=list)
+
+class TrackerClassification(BaseModel):
+    name: str
+    company: str | None = None
+    category: str | None = None
+    risk_level: RiskLevel | None = None
+    confidence: float | None = Field(default=None, ge=0, le=1)
+    source: Source | None = None
+    verified: bool = False
+    explanation: str | None = None
+
+class ClassifyRequest(BaseModel):
+    domains: list[ObservedDomain]
+
+class ObservedDomain(BaseModel):
+    domain: str
+    request_count: int = Field(default=1, ge=0)
+    resource_types: list[str] = Field(default_factory=list)
+    cookie_count: int = Field(default=0, ge=0)
+    max_cookie_lifetime_days: float | None = None
+    is_third_party: bool = True

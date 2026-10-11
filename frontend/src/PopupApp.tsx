@@ -4,11 +4,10 @@ import {
   type ScanResponse,
   type ScanRequest,
 } from "./lib/scanApi";
-
-const DASHBOARD_URL = "http://localhost:5173/dashboard";
-
-/** Show fake numbers instead of scanning. Set to false to use the real scan. */
-const USE_TEST_DATA = true;
+import {
+  HANDOFF_STORAGE_PREFIX,
+  WEBSITE_ORIGIN,
+} from "./lib/handoff";
 
 interface Stats {
   website: string;
@@ -17,14 +16,6 @@ interface Stats {
   cookies: number;
   domains: number;
 }
-
-const TEST_STATS: Stats = {
-  website: "espn.com",
-  trackers: 7,
-  requests: 42,
-  cookies: 18,
-  domains: 12,
-};
 
 interface TabScan {
   website: string;
@@ -51,13 +42,12 @@ function toStats(scan: ScanResponse): Stats {
 }
 
 export default function PopupApp() {
-  const [stats, setStats] = useState<Stats | null>(USE_TEST_DATA ? TEST_STATS : null);
-  const [loading, setLoading] = useState(!USE_TEST_DATA);
+  const [scan, setScan] = useState<ScanResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [opening, setOpening] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (USE_TEST_DATA) return;
-
     async function loadScan() {
       try {
         setLoading(true);
@@ -107,7 +97,7 @@ export default function PopupApp() {
         };
 
         const result = await analyzeScan(payload);
-        setStats(toStats(result));
+        setScan(result);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unable to analyze this website.");
       } finally {
@@ -118,11 +108,53 @@ export default function PopupApp() {
     void loadScan();
   }, []);
 
-  // Go straight into the dashboard, opened on the site you're looking at
-  function openFullJar() {
-    const site = stats?.website ? `&site=${encodeURIComponent(stats.website)}` : "";
-    chrome.tabs.create({ url: `${DASHBOARD_URL}?from=extension${site}` });
+  // Hand the scan to the website and open the dashboard on it
+  async function openFullJar() {
+    if (!scan || opening) return;
+
+    try {
+      setOpening(true);
+      setError(null);
+
+      // Cryptographically random, single-use handoff token.
+      const bytes = crypto.getRandomValues(new Uint8Array(16));
+      const token = Array.from(bytes)
+        .map((byte) => byte.toString(16).padStart(2, "0"))
+        .join("");
+
+      const key = `${HANDOFF_STORAGE_PREFIX}${token}`;
+
+      await chrome.storage.session.set({
+        [key]: {
+          token,
+          createdAt: Date.now(),
+          scan: {
+            version: 1,
+            analyzedAt: new Date().toISOString(),
+            result: scan,
+          },
+        },
+      });
+
+      // Only the random identifier goes into the URL.
+      // The scan itself never goes into the URL.
+      await chrome.tabs.create({
+        url: `${WEBSITE_ORIGIN}/#scan=${token}`,
+      });
+
+      window.close();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to open the full dashboard.",
+      );
+    } finally {
+      setOpening(false);
+    }
   }
+
+  const stats = scan ? toStats(scan) : null;
 
   // what the bandit says
   const said = loading
@@ -203,17 +235,20 @@ export default function PopupApp() {
       {/* Open the cookie jar */}
       <button
         type="button"
-        onClick={openFullJar}
-        className="group mt-3 flex w-full items-center justify-center gap-3 rounded-2xl bg-[#FEF7E5] px-4 py-2 transition hover:brightness-[1.02] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-dough/50 active:scale-[0.99]"
+        onClick={() => void openFullJar()}
+        disabled={!scan || loading || opening}
+        className="group mt-3 flex w-full items-center justify-center gap-3 rounded-2xl bg-[#FEF7E5] px-4 py-2 transition hover:brightness-[1.02] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-dough/50 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:brightness-100 disabled:active:scale-100"
       >
         <span className="text-center leading-tight">
           <span className="block text-sm font-semibold text-cocoa">for more info</span>
-          <span className="block font-serif text-xl font-bold text-chip">Open The Cookie Jar</span>
+          <span className="block font-serif text-xl font-bold text-chip">
+            {opening ? "Opening..." : "Open The Cookie Jar"}
+          </span>
         </span>
         <img
           src="/popup/jar.png"
           alt=""
-          className="h-[64px] w-auto transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-105"
+          className="h-[64px] w-auto transition-transform duration-300 group-enabled:group-hover:-rotate-6 group-enabled:group-hover:scale-105"
           draggable={false}
         />
       </button>

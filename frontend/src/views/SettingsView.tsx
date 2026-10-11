@@ -71,9 +71,19 @@ interface SettingsViewProps {
   onDeleteAccount: () => void;
   onLogin: () => void;
   onSignUp: () => void;
+  /** Clears the scans saved on this device */
+  onClearHistory?: () => void;
 }
 
-export default function SettingsView({ user, onUpdateUser, onLogout, onDeleteAccount, onLogin, onSignUp }: SettingsViewProps) {
+export default function SettingsView({
+  user,
+  onUpdateUser,
+  onLogout,
+  onDeleteAccount,
+  onLogin,
+  onSignUp,
+  onClearHistory,
+}: SettingsViewProps) {
   const [name, setName] = useState(user?.name ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
   const [saved, setSaved] = useState("");
@@ -182,7 +192,10 @@ export default function SettingsView({ user, onUpdateUser, onLogout, onDeleteAcc
             <button type="button" onClick={downloadData} className={secondaryBtn}>
               Download my data
             </button>
-            <button type="button" onClick={() => setHistoryCleared(true)} className={secondaryBtn}>
+            <button type="button" onClick={() => {
+                onClearHistory?.();
+                setHistoryCleared(true);
+              }} className={secondaryBtn}>
               Clear scan history
             </button>
             {historyCleared && (

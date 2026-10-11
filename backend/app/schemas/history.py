@@ -2,7 +2,13 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.schemas.scan import WebsiteResponse
+
+class WebsiteResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    domain: str
+    name: str | None = None
 
 
 class ScanHistoryResponse(BaseModel):

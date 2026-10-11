@@ -24,5 +24,12 @@ export default defineManifest({
   background: {
     service_worker: "src/background/index.ts",
     type: "module"
-  }
+  }, 
+  content_scripts: [
+    {
+      matches: ["http://localhost:5173/*"],
+      js: ["src/content/handoff.ts"],
+      run_at: "document_start",
+    },
+  ],
 });
