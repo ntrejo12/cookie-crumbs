@@ -103,7 +103,7 @@ export default function TasteTestView({ scans }: { scans: SiteScan[] }) {
 
       {/* The stage: fixed ratio, everything positioned with the mockup's coordinates */}
       <section
-        className="relative w-full overflow-hidden rounded-3xl border-2 border-crust bg-[#FEF8E8] [container-type:inline-size]"
+        className="relative w-full [container-type:inline-size]"
         style={{ aspectRatio: `${W} / ${H}` }}
         aria-label={`Comparing ${left.domain} and ${right.domain}`}
       >
