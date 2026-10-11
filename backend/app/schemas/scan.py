@@ -44,7 +44,7 @@ class ScanResponse(BaseModel):
     tracker_count: int
     third_party_requests: int
     cookie_count: int
-    permission_count: int
+    permission_count: int | None = None
     trackers: list[TrackerInfo]
     category_counts: dict[str, int]
     cookie_analysis: CookieAnalysis | None = None

@@ -6,6 +6,7 @@ import {
   WEBSITE_ORIGIN,
   handoffDebug,
 } from "../lib/handoff";
+import { getDomain } from "tldts";
 
 type RequestCounts = Record<string, number>;
 
@@ -42,17 +43,19 @@ function getHostname(url: string): string | null {
 // MVP approximation of whether a request is third-party.
 // A production implementation should use a public suffix list
 // to handle domains such as example.co.uk correctly.
+
 function isThirdParty(
   requestDomain: string,
-  websiteDomain: string
+  websiteDomain: string,
 ): boolean {
-  const getBaseDomain = (domain: string) =>
-    domain.split(".").slice(-2).join(".");
+  const requestSite = getDomain(requestDomain);
+  const websiteSite = getDomain(websiteDomain);
 
-  return (
-    getBaseDomain(requestDomain) !==
-    getBaseDomain(websiteDomain)
-  );
+  if (!requestSite || !websiteSite) {
+    return requestDomain !== websiteDomain;
+  }
+
+  return requestSite !== websiteSite;
 }
 
 chrome.tabs.onUpdated.addListener(
