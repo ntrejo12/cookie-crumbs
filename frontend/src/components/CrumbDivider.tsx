@@ -1,4 +1,8 @@
-/** A row of little cookie crumbs, used as a divider. Same crumb style as the login page. */
+/**
+ * A row of little cookie crumbs used as a divider. Same crumb style as the login page.
+ * It runs edge to edge across the page (it's wider than the screen and gets trimmed
+ * at the sidebar and the window edge).
+ */
 
 // fixed pseudo-random so the crumbs don't move between renders
 function rand(seed: number) {
@@ -14,12 +18,10 @@ const SHAPES = [
   "30% 50% 40% 60%",
 ];
 
-const COUNT = 28;
+const COUNT = 140; // enough to cover very wide screens
 const CRUMBS = Array.from({ length: COUNT }, (_, i) => {
   const r = (n: number) => rand(i * 11 + n);
-  // bigger in the middle, trailing off toward the ends
-  const fromCenter = Math.abs(i - (COUNT - 1) / 2) / ((COUNT - 1) / 2);
-  const size = Math.round(5 + (1 - fromCenter) * 7 + r(1) * 4);
+  const size = Math.round(6 + r(1) * 8);
   return {
     size,
     shape: SHAPES[Math.floor(r(2) * SHAPES.length)],
@@ -31,7 +33,7 @@ const CRUMBS = Array.from({ length: COUNT }, (_, i) => {
 
 export default function CrumbDivider({ className = "" }: { className?: string }) {
   return (
-    <div aria-hidden className={`mx-auto flex max-w-2xl items-center justify-between px-2 ${className}`}>
+    <div aria-hidden className={`relative left-1/2 flex w-[200vw] -translate-x-1/2 items-center justify-center gap-[22px] ${className}`}>
       {CRUMBS.map((c, i) => (
         <span
           key={i}
