@@ -17,26 +17,34 @@ const QUESTION_SVG = `data:image/svg+xml;utf8,${encodeURIComponent(
 const nodeSize = (requests: number) => Math.round(Math.min(52, 18 + Math.sqrt(requests) * 5.2));
 
 /** Same ring layout as the mockup: direct trackers on the inner ring, trackers-of-trackers further out. */
-function positions(trackers: Tracker[]) {
+function positions(trackers: Tracker[], yScale = 1) {
   const pos = new Map<string, { x: number; y: number; angle: number }>();
   const roots = trackers.filter((t) => !t.via);
   roots.forEach((t, i) => {
     const angle = -Math.PI / 2 + (i / roots.length) * Math.PI * 2;
-    pos.set(t.id, { x: RING1.rx * Math.cos(angle), y: RING1.ry * Math.sin(angle), angle });
+    pos.set(t.id, { x: RING1.rx * Math.cos(angle), y: RING1.ry * yScale * Math.sin(angle), angle });
   });
   roots.forEach((root) => {
     const kids = trackers.filter((t) => t.via === root.id);
     const p = pos.get(root.id)!;
     kids.forEach((k, j) => {
       const angle = p.angle + (j - (kids.length - 1) / 2) * 0.32;
-      pos.set(k.id, { x: RING2.rx * Math.cos(angle), y: RING2.ry * Math.sin(angle), angle });
+      pos.set(k.id, { x: RING2.rx * Math.cos(angle), y: RING2.ry * yScale * Math.sin(angle), angle });
     });
   });
   return pos;
 }
 
-function toElements(scan: SiteScan): ElementDefinition[] {
-  const pos = positions(scan.trackers);
+/** Flatten the rings a bit when the graph area is wide and short, so it fills the space instead of shrinking. */
+const LAYOUT_ASPECT = 1.76; // width / height of the default layout, labels included
+function layoutYScale(el: HTMLElement | null) {
+  if (!el || !el.clientHeight) return 1;
+  const aspect = el.clientWidth / el.clientHeight;
+  return Math.max(0.55, Math.min(1, LAYOUT_ASPECT / aspect));
+}
+
+function toElements(scan: SiteScan, yScale = 1): ElementDefinition[] {
+  const pos = positions(scan.trackers, yScale);
   const els: ElementDefinition[] = [
     { group: "nodes", data: { id: SITE_ID, label: scan.domain }, position: { x: 0, y: 0 }, classes: "site" },
   ];
@@ -62,10 +70,12 @@ interface CrumbTrailProps {
   scan: SiteScan;
   selectedId: string | null;
   onSelect: (id: string | null) => void;
+  /** Graph height in px. Leave out for the default (340px on phones, 500px otherwise). */
+  height?: number;
 }
 
 /** The tracker graph (Cytoscape.js): the site is the cookie in the middle, every crumb is a domain it phoned home to. */
-export default function CrumbTrail({ scan, selectedId, onSelect }: CrumbTrailProps) {
+export default function CrumbTrail({ scan, selectedId, onSelect, height }: CrumbTrailProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<Core | null>(null);
   const onSelectRef = useRef(onSelect);
@@ -79,7 +89,7 @@ export default function CrumbTrail({ scan, selectedId, onSelect }: CrumbTrailPro
 
     const cy = cytoscape({
       container: containerRef.current,
-      elements: toElements(scan),
+      elements: toElements(scan, layoutYScale(containerRef.current)),
       layout: { name: "preset" },
       // pinch-zoom on phones; on desktop the wheel would hijack page scrolling, so use the buttons
       userZoomingEnabled: window.matchMedia("(pointer: coarse)").matches,
@@ -213,7 +223,7 @@ export default function CrumbTrail({ scan, selectedId, onSelect }: CrumbTrailPro
       cy.destroy();
       cyRef.current = null;
     };
-  }, [scan]);
+  }, [scan, height]);
 
   // highlight the picked crumb, its parent and its children; fade the rest
   useEffect(() => {
@@ -241,7 +251,9 @@ export default function CrumbTrail({ scan, selectedId, onSelect }: CrumbTrailPro
     <div className="relative">
       <div
         ref={containerRef}
-        className="h-[340px] w-full sm:h-[500px]"
+        className={height ? "w-full" : "h-[340px] w-full sm:h-[500px]"}
+        style={height ? { height } : undefined}
+        data-crumb-graph
         role="img"
         aria-label={`Tracker graph for ${scan.domain}: ${scan.trackers.length} trackers. Use the list below the graph to inspect each one.`}
       />
