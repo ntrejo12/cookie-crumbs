@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import {analyzeScan, type ScanResponse, type ScanRequest,} from "./lib/scanApi";
-import {HANDOFF_STORAGE_PREFIX, WEBSITE_ORIGIN,} from "./lib/handoff";
+import {HANDOFF_STORAGE_PREFIX, WEBSITE_ORIGIN, handoffDebug} from "./lib/handoff";
 import { analyzeCookies } from "./lib/cookieAnalysis";
 import { analyzePermissions } from "./lib/permissionAnalysis";
 
