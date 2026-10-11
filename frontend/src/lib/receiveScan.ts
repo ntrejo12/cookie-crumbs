@@ -37,10 +37,12 @@ export function receiveScan(
     }
 
     let settled = false;
+    let requestIntervalId: number;
 
     const cleanup = () => {
       window.removeEventListener("message", onMessage);
       clearTimeout(timeoutId);
+      clearInterval(requestIntervalId);
     };
 
     const onMessage = (event: MessageEvent) => {
@@ -90,12 +92,17 @@ export function receiveScan(
 
     window.addEventListener("message", onMessage);
 
-    window.postMessage(
-      {
-        type: HANDOFF_REQUEST,
-        token,
-      },
-      pageOrigin,
-    );
+    const requestHandoff = () => {
+      window.postMessage(
+        {
+          type: HANDOFF_REQUEST,
+          token,
+        },
+        pageOrigin,
+      );
+    };
+
+    requestHandoff();
+    requestIntervalId = window.setInterval(requestHandoff, 250);
   });
 }
