@@ -96,7 +96,7 @@ export default function TasteTestView({ scans }: { scans: SiteScan[] }) {
 
   return (
     <div className="space-y-6">
-      <header>
+      <header className="text-center">
         <h1 className="font-serif text-3xl font-bold text-chip sm:text-4xl">Crumb Test: Which Site Is Crumbier?</h1>
         <p className="mt-1 text-cocoa">Pick two sites you've scanned and compare what they leave behind.</p>
       </header>
@@ -138,8 +138,15 @@ export default function TasteTestView({ scans }: { scans: SiteScan[] }) {
         <div
           aria-live="polite"
           className="absolute -translate-x-1/2 -translate-y-1/2 text-center leading-tight"
-          style={{ left: px(533), top: py(146), width: px(320) }}
+          style={{ left: px(533), top: py(128), width: px(320) }}
         >
+          <img
+            src="/popup/cookie-chocchip.svg"
+            alt=""
+            draggable={false}
+            className="mx-auto mb-[0.35em] select-none"
+            style={{ width: fs(54), minWidth: 32 }}
+          />
           <p className="font-sans font-bold text-black" style={{ fontSize: fs(19) }}>
             {winner.title}
           </p>
