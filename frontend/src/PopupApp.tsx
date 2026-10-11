@@ -139,7 +139,7 @@ export default function PopupApp() {
       // Only the random identifier goes into the URL.
       // The scan itself never goes into the URL.
       await chrome.tabs.create({
-        url: `${WEBSITE_ORIGIN}/#scan=${token}`,
+        url: `${WEBSITE_ORIGIN}/dashboard#scan=${token}`,
       });
 
       window.close();
