@@ -1,4 +1,5 @@
-export const WEBSITE_ORIGIN = "http://localhost:5173";
+export const WEBSITE_ORIGIN =
+  import.meta.env.VITE_WEBSITE_ORIGIN ?? "http://localhost:5173";
 export const HANDOFF_REQUEST = "COOKIE_CRUMBS_HANDOFF_REQUEST";
 export const HANDOFF_RESPONSE = "COOKIE_CRUMBS_HANDOFF_RESPONSE";
 export const HANDOFF_STORAGE_PREFIX = "cookie-crumbs-handoff:";

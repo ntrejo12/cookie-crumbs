@@ -1,7 +1,6 @@
 import {
   HANDOFF_REQUEST,
   HANDOFF_RESPONSE,
-  WEBSITE_ORIGIN,
 } from "./handoff";
 import {
   isSharedScan,
@@ -30,6 +29,8 @@ export function receiveScan(
   token: string,
 ): Promise<SharedScan> {
   return new Promise((resolve, reject) => {
+    const pageOrigin = window.location.origin;
+
     if (!TOKEN_PATTERN.test(token)) {
       reject(new Error("Invalid scan handoff token."));
       return;
@@ -44,7 +45,7 @@ export function receiveScan(
 
     const onMessage = (event: MessageEvent) => {
       if (event.source !== window) return;
-      if (event.origin !== WEBSITE_ORIGIN) return;
+      if (event.origin !== pageOrigin) return;
 
       const data = event.data;
 
@@ -94,7 +95,7 @@ export function receiveScan(
         type: HANDOFF_REQUEST,
         token,
       },
-      WEBSITE_ORIGIN,
+      pageOrigin,
     );
   });
 }
