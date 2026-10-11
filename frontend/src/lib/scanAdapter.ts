@@ -54,17 +54,20 @@ export function isSharedScan(value: unknown): value is SharedScan {
   ));
 }
 
+// the scanner says "fingerprinting" and "other"; the dashboard calls them "fingerprint" and "unknown"
+function toCategory(category: string): Category {
+  if (category === "fingerprinting") return "fingerprint";
+  if (category === "other") return "unknown";
+  return category as Category;
+}
+
 export function toSiteScan(shared: SharedScan): SiteScan {
   const result = shared.result;
 
   const trackers: Tracker[] = result.trackers.map((tracker) => ({
     id: tracker.domain,
     domain: tracker.domain,
-    category: (
-      tracker.category === "other"
-        ? "unknown"
-        : tracker.category
-    ) as Category,
+    category: toCategory(tracker.category),
     requests: tracker.request_count,
     cookies: null,
     known: tracker.known_tracker,

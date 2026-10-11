@@ -1,28 +1,44 @@
-export type View = "jar" | "trail" | "taste" | "class";
+export type View = "jar" | "trail" | "taste" | "class" | "settings";
 
 const NAV: { id: View; title: string; sub: string }[] = [
-  { id: "jar", title: "Cookie jar", sub: "Overview" },
-  { id: "trail", title: "Crumb trail", sub: "Tracker graph" },
-  { id: "taste", title: "Taste test", sub: "Compare sites" },
-  { id: "class", title: "Cookie class", sub: "Learn" },
+  { id: "jar", title: "Cookie Jar", sub: "Overview" },
+  { id: "trail", title: "Crumb Trail", sub: "Who's tracking you" },
+  { id: "taste", title: "Crumb Test", sub: "Compare sites" },
+  { id: "class", title: "Behind The Crumbs", sub: "Learn" },
+  { id: "settings", title: "Settings", sub: "Account & privacy" },
 ];
+
+export interface User {
+  name: string;
+  email: string;
+}
 
 interface SidebarProps {
   view: View;
   onChange: (v: View) => void;
-  userEmail: string;
+  /** null = browsing as a guest (e.g. opened straight from the extension) */
+  user: User | null;
   onLogout: () => void;
+  onLogin: () => void;
 }
 
-export default function Sidebar({ view, onChange, userEmail, onLogout }: SidebarProps) {
+export default function Sidebar({ view, onChange, user, onLogout, onLogin }: SidebarProps) {
+  const authButton = user ? (
+    <button type="button" onClick={onLogout} className="text-sm font-semibold text-dough hover:underline">
+      Log out
+    </button>
+  ) : (
+    <button type="button" onClick={onLogin} className="text-sm font-semibold text-dough hover:underline">
+      Log in
+    </button>
+  );
+
   return (
-    <aside className="bg-crumbs-bg text-cream lg:fixed lg:inset-y-0 lg:left-0 lg:flex lg:w-64 lg:flex-col">
+    <aside className="relative z-20 bg-crumbs-bg text-cream lg:fixed lg:inset-y-0 lg:left-0 lg:flex lg:w-64 lg:flex-col">
       <div className="flex items-center gap-2.5 px-5 pt-5 lg:px-6 lg:pt-7">
         <img src="/logo.png" alt="" className="h-10 w-auto" />
         <span className="font-serif text-xl font-bold">Cookie Crumbs</span>
-        <button type="button" onClick={onLogout} className="ml-auto text-sm font-semibold text-dough hover:underline lg:hidden">
-          Log out
-        </button>
+        <span className="ml-auto lg:hidden">{authButton}</span>
       </div>
 
       <nav
@@ -49,12 +65,17 @@ export default function Sidebar({ view, onChange, userEmail, onLogout }: Sidebar
       </nav>
 
       <div className="hidden border-t border-white/10 px-6 py-5 lg:mt-auto lg:block">
-        <p className="truncate text-xs text-cream/70" title={userEmail}>
-          {userEmail}
-        </p>
-        <button type="button" onClick={onLogout} className="mt-1 text-sm font-semibold text-dough hover:underline">
-          Log out
-        </button>
+        {user ? (
+          <>
+            <p className="truncate text-sm font-semibold text-cream">{user.name}</p>
+            <p className="truncate text-xs text-cream/70" title={user.email}>
+              {user.email}
+            </p>
+          </>
+        ) : (
+          <p className="text-sm text-cream/80">Browsing as a guest</p>
+        )}
+        <div className="mt-1">{authButton}</div>
       </div>
     </aside>
   );

@@ -1,8 +1,10 @@
-
+/* Layer order: Neon's prebuilt auth UI styles rank below our Tailwind classes, so ours always win. */
 @layer theme, base, neon, components, utilities;
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:wght@700&display=swap");
+
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:wght@700&family=Patrick+Hand&display=swap");
 @import "@neondatabase/neon-js/ui/css" layer(neon);
 @import "tailwindcss";
+
 /* Cookie Crumbs theme tokens: usable as bg-crumbs-bg, text-dough, animate-float, etc. */
 @theme {
   --color-crumbs-bg: #342107; /* logo background as it renders */
@@ -17,6 +19,7 @@
 
   --font-sans: "DM Sans", system-ui, sans-serif;
   --font-serif: "Fraunces", Georgia, serif;
+  --font-hand: "Patrick Hand", "Comic Sans MS", cursive; /* popup labels */
 
   --animate-float: float 6s ease-in-out infinite;
   @keyframes float {

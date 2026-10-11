@@ -25,7 +25,7 @@ export default function XRayPanel({ tracker, loadedBy, onClose }: XRayPanelProps
         <span aria-hidden className="text-4xl">🔍</span>
         <h3 className="mt-3 font-serif text-lg font-bold text-chip">Privacy X-Ray</h3>
         <p className="mt-1 text-sm text-cocoa">
-          Tap any crumb in the trail to see who it is, what it does, and how sure we are.
+          Pick any crumb to see who it is, what it does, and how sure we are.
         </p>
       </aside>
     );
@@ -101,7 +101,7 @@ export default function XRayPanel({ tracker, loadedBy, onClose }: XRayPanelProps
       )}
 
       <div className="mt-4">
-        <h4 className="text-sm font-bold text-chip">Why it matters</h4>
+        <h4 className="text-sm font-bold text-chip">Why It Matters</h4>
         <p className="mt-1 text-sm text-cocoa">
           {unknown ? `If the guess is right: ${CATEGORY_META[effective].why}` : meta.why}
         </p>

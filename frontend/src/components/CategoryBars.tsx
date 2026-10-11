@@ -17,9 +17,9 @@ export default function CategoryBars({ trackers, max }: CategoryBarsProps) {
       {cats.map((c, i) => (
         <li key={c} className="grid grid-cols-[6.5rem_1fr_1.75rem] items-center gap-3 sm:grid-cols-[7.5rem_1fr_2rem]">
           <span className="text-sm text-chip">{CATEGORY_META[c].label}</span>
-          <span className="h-3 overflow-hidden rounded-full bg-line/60">
+          <span className="h-3.5 overflow-hidden rounded-full bg-white/70 ring-1 ring-line">
             <span
-              className="block h-full origin-left rounded-full motion-safe:animate-grow"
+              className="block h-full origin-left rounded-full shadow-[inset_0_0_0_1.5px_#1E1209] motion-safe:animate-grow"
               style={{
                 width: `${(counts[c] / top) * 100}%`,
                 backgroundColor: CATEGORY_META[c].color,
