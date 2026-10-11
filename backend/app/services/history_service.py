@@ -54,19 +54,47 @@ def delete_all(db: Session, user_id: str) -> int:
     return len(scans)
 
 
-TRACKER_WEIGHTS = {"advertising": 8, "fingerprinting": 10, "social": 5,
-                   "analytics": 4, "unknown": 2}
+TRACKER_WEIGHTS = { "advertising": 7,"fingerprinting": 9, "fingerprint": 9, "social": 5, 
+                   "analytics": 3, "other": 0, "unknown": 0,}
 
 
-def estimate_privacy_score(body: ScanSaveRequest) -> int:
-    """Simple, explainable placeholder: start at 100 and subtract.
-    Swap for the team's real scoring if privacy_service.py already has one."""
-    score = 100
-    for t in body.trackers:
-        score -= TRACKER_WEIGHTS.get(t.category or "unknown", 0)
-    score -= min(body.cookie_count, 40) // 4
-    score -= min(body.permission_count, 5) * 2
-    return max(0, min(100, score))
+def estimate_privacy_score(body: ScanSaveRequest) -> int | None:
+    """
+    Crumb Score: higher means more observed tracking exposure.
+
+    Mirrors frontend/src/lib/crumbScore.ts.
+
+    This is an explainable exposure index, not a security rating.
+    """
+
+    # No confirmed request observations means we cannot reliably score tracking activity.
+    if (body.third_party_request_count == 0 and len(body.trackers) == 0):
+        return None
+
+    tracker_points = min(45,
+        sum(
+            TRACKER_WEIGHTS.get(tracker.category or "unknown", 0)
+            for tracker in body.trackers
+            if tracker.category not in (None, "unknown", "other")
+        ),
+    )
+
+    request_points = min(20, body.third_party_request_count // 10,)
+
+    cookie_points = min(20, body.cookie_count // 5,)
+
+    # The historical payload currently lacks the four individual Chrome content settings.
+    # Do not substitute permission_count unless its semantics are explicitly the count of allowed measured settings.
+    permission_points = 0
+
+    score = (
+        tracker_points
+        + request_points
+        + cookie_points
+        + permission_points
+    )
+
+    return min(100, max(0, score))
 
 
 def _get_or_create_website(db: Session, domain: str, name: str | None) -> Website:
