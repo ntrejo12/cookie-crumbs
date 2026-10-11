@@ -108,8 +108,23 @@ export default function TasteTestView({ scans }: { scans: SiteScan[] }) {
         aria-label={`Comparing ${left.domain} and ${right.domain}`}
       >
         {/* hands dunking cookies */}
-        <img src="/crumbtest/hand-left.png" alt="" draggable={false} className="pointer-events-none absolute select-none" style={{ left: 0, top: py(131), width: px(376) }} />
-        <img src="/crumbtest/hand-right.png" alt="" draggable={false} className="pointer-events-none absolute select-none" style={{ right: 0, top: py(131), width: px(357) }} />
+        {/* each forearm is stretched out past the stage so the hands reach the edges of the screen */}
+        <div className="pointer-events-none absolute select-none" style={{ left: 0, top: py(131), width: px(376) }}>
+          <div
+            aria-hidden
+            className="absolute right-[calc(100%-2px)] top-0 h-full w-[100vw]"
+            style={{ backgroundImage: "url(/crumbtest/arm-left.png)", backgroundSize: "auto 100%", backgroundRepeat: "repeat-x" }}
+          />
+          <img src="/crumbtest/hand-left.png" alt="" draggable={false} className="relative block w-full" />
+        </div>
+        <div className="pointer-events-none absolute select-none" style={{ right: 0, top: py(131), width: px(357) }}>
+          <div
+            aria-hidden
+            className="absolute left-[calc(100%-2px)] top-0 h-full w-[100vw]"
+            style={{ backgroundImage: "url(/crumbtest/arm-right.png)", backgroundSize: "auto 100%", backgroundRepeat: "repeat-x" }}
+          />
+          <img src="/crumbtest/hand-right.png" alt="" draggable={false} className="relative block w-full" />
+        </div>
 
         {/* milk glasses */}
         <img src="/crumbtest/glass-left.png" alt="" draggable={false} className="pointer-events-none absolute select-none" style={{ left: px(165), top: py(439), width: px(191) }} />
