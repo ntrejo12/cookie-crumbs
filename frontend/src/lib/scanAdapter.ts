@@ -4,6 +4,7 @@ import type {
   SiteScan,
   Tracker,
 } from "../data/mockScans";
+import { calculateCrumbScore } from "./crumbScore";
 
 export interface SharedScan {
   version: 1;
@@ -61,27 +62,32 @@ function toCategory(category: string): Category {
   return category as Category;
 }
 
+
 export function toSiteScan(shared: SharedScan): SiteScan {
   const result = shared.result;
 
-  const trackers: Tracker[] = result.trackers.map((tracker) => ({
-    id: tracker.domain,
-    domain: tracker.domain,
-    category: toCategory(tracker.category),
-    requests: tracker.request_count,
-    cookies: null,
-    known: tracker.known_tracker,
-  }));
+  const scoreResult = calculateCrumbScore(result);
+
+  const trackers: Tracker[] = result.trackers.map(
+    (tracker) => ({
+      id: tracker.domain,
+      domain: tracker.domain,
+      category: toCategory(tracker.category),
+      requests: tracker.request_count,
+      cookies: null,
+      known: tracker.known_tracker,
+    }),
+  );
 
   return {
-  domain: result.website,
-  score: null,
-  scannedAt: new Date(shared.analyzedAt).toLocaleString(),
-  cookies: result.cookie_count,
-  thirdPartyRequests: result.third_party_requests,
-  permissions: null,
-  trackers,
-  cookieAnalysis: result.cookie_analysis,
-  permissionSettings: result.permissions,
-};
+    domain: result.website,
+    score: scoreResult.score,
+    scannedAt: new Date(shared.analyzedAt).toLocaleString(),
+    cookies: result.cookie_count,
+    thirdPartyRequests: result.third_party_requests,
+    permissions: null,
+    trackers,
+    cookieAnalysis: result.cookie_analysis,
+    permissionSettings: result.permissions,
+  };
 }
