@@ -5,7 +5,6 @@ from pathlib import Path
 
 import tldextract
 
-from app.schemas.ai import TrackerClassification
 from app.schemas.ai import ObservedDomain, TrackerClassification
 
 DATA_PATH = Path(__file__).resolve().parent.parent / "data" / "tracker_domains.json"
@@ -60,70 +59,143 @@ def _from_known(base: str) -> TrackerClassification | None:
         explanation=entry.get("description"),   
     )
 
+
 def _from_heuristics(domain: str) -> TrackerClassification | None:
     d = domain.lower()
+
     for cat, words in HEURISTICS.items():
-        if any(w in d for w in words):
+        if any(word in d for word in words):
             return TrackerClassification(
-                name=registrable(domain), category=cat,
+                name=domain,
+                category=cat,
                 risk_level=CATEGORY_RISK.get(cat, "unknown"),
-                confidence=0.55, source="heuristic", verified=False,
+                confidence=0.55,
+                source="heuristic",
+                verified=False,
+                explanation=(
+                    f"The domain name contains terms associated with "
+                    f"{cat} services. This is an unverified estimate."
+                ),
             )
+
     return None
 
 
-@lru_cache
+@lru_cache(maxsize=1)
 def _zero_shot():
-    from transformers import pipeline  # lazy: slow import, big model
-    return pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
+    from transformers import pipeline
+
+    return pipeline(
+        "zero-shot-classification",
+        model="facebook/bart-large-mnli",
+    )
 
 
 def _from_model(obs: ObservedDomain) -> TrackerClassification:
-    text = (f"Network domain {obs.domain}. Resource types: "
-            f"{', '.join(obs.resource_types) or 'unknown'}. "
-            f"{obs.request_count} requests, sets {obs.cookie_count} cookies.")
-    out = _zero_shot()(text, list(MODEL_LABELS), hypothesis_template="This domain is used for {}.")
-    label, score = out["labels"][0], float(out["scores"][0])
-    if score < 0.45:
-        return TrackerClassification(name=registrable(obs.domain), category="unknown",
-                                     risk_level="unknown", confidence=score,
-                                     source="model", verified=False)
-    cat = MODEL_LABELS[label]
+    description = (
+        f"Domain: {obs.domain}. "
+        f"Resource types: {', '.join(obs.resource_types) or 'unknown'}. "
+        f"Observed requests: {obs.request_count}. "
+        f"Cookie count: {obs.cookie_count}."
+    )
+
+    output = _zero_shot()(
+        description,
+        candidate_labels=list(MODEL_LABELS.keys()),
+        hypothesis_template="This network service is used for {}.",
+    )
+
+    label = output["labels"][0]
+    score = float(output["scores"][0])
+
+    category = MODEL_LABELS[label] if score >= 0.45 else "unknown"
+
     return TrackerClassification(
-        name=registrable(obs.domain), category=cat,
-        risk_level=CATEGORY_RISK.get(cat, "unknown"),
-        confidence=round(score, 2), source="model", verified=False,
+        name=obs.domain,
+        category=category,
+        risk_level=CATEGORY_RISK.get(category, "unknown"),
+        confidence=round(score, 2),
+        source="model",
+        verified=False,
+        explanation=(
+            f"The Hugging Face model estimates this domain may be "
+            f"used for {label}. This prediction is based only on "
+            f"limited request metadata and is not verified."
+            if category != "unknown"
+            else "The model could not identify a likely service category."
+        ),
     )
 
 
 def classify(obs: ObservedDomain) -> TrackerClassification:
     base = registrable(obs.domain)
-    if base in _cache:
-        return _cache[base]
 
-    result = (_from_known(base) or _from_heuristics(obs.domain))
-    if result is None:
-        if os.getenv("ENABLE_MODEL", "true").lower() == "true":
-            result = _from_model(obs)
-        else:
-            result = TrackerClassification(name=base, category="unknown",
-                                           risk_level="unknown", source="heuristic")
-    _cache[base] = result
-    return result
+    known = _from_known(base)
+
+    if known is not None:
+        return known.model_copy(
+            update={"name": obs.domain}
+        )
+
+    # A model prediction should be preferred over a
+    # domain-name heuristic when the model is available.
+    if os.getenv("ENABLE_MODEL", "false").lower() == "true":
+        try:
+            return _from_model(obs)
+        except Exception:
+            import logging
+            logging.getLogger(__name__).exception(
+                "Hugging Face classification failed for %s",
+                obs.domain,
+            )
+
+    heuristic = _from_heuristics(obs.domain)
+
+    if heuristic is not None:
+        return heuristic
+
+    return TrackerClassification(
+        name=obs.domain,
+        category="unknown",
+        risk_level="unknown",
+        source=None,
+        verified=False,
+        explanation="No reliable classification is available.",
+    )
 
 
-def classify_many(domains: list[ObservedDomain]) -> list[TrackerClassification]:
-    return [classify(d) for d in domains]
+def classify_many(
+    domains: list[ObservedDomain],
+) -> list[TrackerClassification]:
+    return [
+        classify(domain).model_copy(
+            update={"request_count": domain.request_count}
+        )
+        for domain in domains
+    ]
 
 
-def classify_aggregated(domains: list[ObservedDomain]) -> list[TrackerClassification]:
+def classify_aggregated(
+    domains: list[ObservedDomain],
+) -> list[TrackerClassification]:
     merged: dict[str, TrackerClassification] = {}
-    for d in domains:
-        c = classify(d)
-        if c.name in merged:
-            prev = merged[c.name]
-            merged[c.name] = prev.model_copy(
-                update={"request_count": prev.request_count + d.request_count})
+
+    for domain in domains:
+        classification = classify(domain)
+        key = classification.name
+
+        if key in merged:
+            previous = merged[key]
+            merged[key] = previous.model_copy(
+                update={
+                    "request_count": (
+                        previous.request_count + domain.request_count
+                    )
+                }
+            )
         else:
-            merged[c.name] = c.model_copy(update={"request_count": d.request_count})
+            merged[key] = classification.model_copy(
+                update={"request_count": domain.request_count}
+            )
+
     return list(merged.values())

@@ -8,6 +8,7 @@ import PrivacyDetails from "../components/PrivacyDetails";
 import AIPrivacyDetective from "../components/AIPrivacyDetective";
 import type { AIAnalysisResponse } from "../lib/aiApi";
 import { findTrackerClassification } from "../lib/trackerClassification";
+import { classifyUnfamiliarDomains } from "../lib/classifyApi";
 
 interface ViewProps {
   scan: SiteScan;
@@ -22,28 +23,34 @@ const GRAPH_MIN = 220; // never squash it smaller than this (short screens scrol
 
 /** Cookie jar: the overview for one site. */
 export default function JarView({scan, selectedId, onSelect,}: ViewProps) {
+  // Full AI privacy analysis
   const [aiResult, setAiResult] = useState<AIAnalysisResponse | null>(null);
 
-  // Keep analysis associated with the exact scan object.
-  // Prevent results from another website or scan being shown.
   const [analyzedScan, setAnalyzedScan] = useState<SiteScan | null>(null);
 
+  // Hugging Face domain classification
+  const [domainClassifications, setDomainClassifications] = useState<AIAnalysisResponse["tracker_classifications"]>([]);
+
+  const [classifying, setClassifying] = useState(false);
+
+  const [classificationError, setClassificationError] = useState<string | null>(null);
+
+  const [classifiedScan, setClassifiedScan] = useState<SiteScan | null>(null);
+
+  // Selected tracker
   const selected = scan.trackers.find((tracker) => tracker.id === selectedId,);
 
-  const loadedBy = selected?.via ? scan.trackers.find((tracker) => tracker.id === selected.via,
-  )?.domain: undefined;
+  const loadedBy = selected?.via ? scan.trackers.find((tracker) => tracker.id === selected.via,)?.domain: undefined;
 
-  const classifications = analyzedScan === scan ? aiResult?.tracker_classifications ?? []: [];
+  // Combine standalone classifications with full AI analysis.
+  const classifications = [...(classifiedScan === scan ? domainClassifications : []), ...(analyzedScan === scan
+    ? aiResult?.tracker_classifications ?? []: []),
+  ];
 
-  const selectedClassification = selected ? findTrackerClassification(
-    selected.domain,
-    classifications,
-  ): undefined;
+  const selectedClassification = selected ? findTrackerClassification( selected.domain, classifications, ) : undefined;
 
-  function handleAIAnalysisComplete(analysis: AIAnalysisResponse,) {
-    setAiResult(analysis);
-    setAnalyzedScan(scan);
-  }
+  function handleAIAnalysisComplete(analysis: AIAnalysisResponse,
+  ) {setAiResult(analysis);setAnalyzedScan(scan);}
 
   // Size the graph so the whole oven fits on screen without scrolling
   const ovenRef = useRef<HTMLDivElement>(null);
@@ -88,6 +95,16 @@ export default function JarView({scan, selectedId, onSelect,}: ViewProps) {
     },
   ];
 
+  async function handleClassify() {setClassifying(true); setClassificationError(null);
+    try {
+      const results = await classifyUnfamiliarDomains(scan);
+      setDomainClassifications(results);
+      setClassifiedScan(scan);
+    } catch (error) {setClassificationError(
+      error instanceof Error ? error.message : "Unable to classify domains.",);
+    } finally {setClassifying(false);}
+  }
+
   return (
     <div className="space-y-5">
       {/* Score header */}
@@ -113,6 +130,38 @@ export default function JarView({scan, selectedId, onSelect,}: ViewProps) {
             {s.hint && <p className="truncate text-xs text-cocoa">{s.hint}</p>}
           </div>
         ))}
+      </section>
+
+      <section className={`${card} p-5`}>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h2 className="font-serif text-xl font-bold text-chip">
+              Identify Unfamiliar Crumbs
+            </h2>
+
+            <p className="mt-1 text-sm text-cocoa">
+              Use Hugging Face to estimate what unfamiliar third-party services might do.
+            </p>
+          </div>
+
+          <button type="button" onClick={handleClassify} disabled={classifying} className="rounded-xl bg-crust px-5 py-2.5 font-semibold text-cream disabled:opacity-50">
+            {classifying
+              ? "Identifying crumbs..." : "Identify with AI"}
+          </button>
+        </div>
+
+        {classificationError && (
+          <p role="alert" className="mt-3 text-sm text-ad">
+            {classificationError}
+          </p>
+        )}
+
+        {classifiedScan === scan && (
+          <p className="mt-3 text-sm text-cocoa">
+            {domainClassifications.filter((item) => item.source === "model",).length} model predictions received.
+            Select a crumb to inspect the classification and its uncertainty in Privacy X-Ray.
+          </p>
+        )}
       </section>
 
       {/* Crumb trail + X-Ray */}
