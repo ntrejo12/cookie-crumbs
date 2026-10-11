@@ -7,6 +7,7 @@ import {
 import {
   HANDOFF_STORAGE_PREFIX,
   WEBSITE_ORIGIN,
+  handoffDebug,
 } from "./lib/handoff";
 
 interface Stats {
@@ -110,6 +111,10 @@ export default function PopupApp() {
 
   // Hand the scan to the website and open the dashboard on it
   async function openFullJar() {
+    handoffDebug("Extension button clicked", {
+      hasScan: Boolean(scan),
+      opening,
+    });
     if (!scan || opening) return;
 
     try {
@@ -121,6 +126,7 @@ export default function PopupApp() {
       const token = Array.from(bytes)
         .map((byte) => byte.toString(16).padStart(2, "0"))
         .join("");
+      handoffDebug("Scan token created", { tokenLength: token.length });
 
       const key = `${HANDOFF_STORAGE_PREFIX}${token}`;
 
@@ -135,15 +141,20 @@ export default function PopupApp() {
           },
         },
       });
+      handoffDebug("Scan stored for handoff", { storageKeyCreated: true });
 
       // Only the random identifier goes into the URL.
       // The scan itself never goes into the URL.
       await chrome.tabs.create({
         url: `${WEBSITE_ORIGIN}/dashboard#scan=${token}`,
       });
+      handoffDebug("Dashboard opened", { origin: WEBSITE_ORIGIN, path: "/dashboard" });
 
       window.close();
     } catch (err) {
+      handoffDebug("Extension handoff failed", {
+        reason: err instanceof Error ? err.message : "Unknown error",
+      });
       setError(
         err instanceof Error
           ? err.message
