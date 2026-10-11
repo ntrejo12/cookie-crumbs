@@ -1,115 +1,187 @@
-# generates AI explanations and prepares scan summaries
-
+import hashlib
 import json
+import logging
 import os
-from functools import lru_cache
-from pathlib import Path
+import re
+from collections import Counter
 
-import tldextract
+from app.schemas.ai import AIAnalysisRequest, AIAnalysisResponse
+from app.services.privacy_knowledge import (
+    CATEGORY_KNOWLEDGE,
+    GENERAL_PROTECTIONS,
+    PERMISSION_KNOWLEDGE,
+)
 
-from app.schemas.ai import TrackerClassification
-from app.schemas.scan import ObservedDomain
+logger = logging.getLogger("cookie-crumbs.ai")
 
-DATA_PATH = Path(__file__).resolve().parent.parent / "data" / "trackers.json"
+MAX_TRACKERS_TO_MODEL = 15
+_cache: dict[str, AIAnalysisResponse] = {}   # saves free-tier quota and speeds up demos
 
-# offline-safe: bundled public-suffix snapshot, no network fetch
-_extract = tldextract.TLDExtract(suffix_list_urls=())
+SYSTEM_PROMPT = """You are Cookie Crumbs' privacy guide. You explain website tracking to everyday people in plain, calm English.
 
-CATEGORY_RISK = {
-    "advertising": "high", "fingerprinting": "high",
-    "social": "medium", "analytics": "medium",
-    "cdn": "low", "functional": "low",
-}
-
-HEURISTICS = {
-    "advertising": ["ads", "adserver", "adsystem", "doubleclick", "pixel", "banner"],
-    "analytics":   ["analytics", "metrics", "stats", "telemetry", "beacon", "track"],
-    "cdn":         ["cdn", "static", "assets", "cache"],
-}
-
-MODEL_LABELS = {
-    "online advertising": "advertising",
-    "web analytics": "analytics",
-    "social media": "social",
-    "content delivery network": "cdn",
-    "website functionality": "functional",
-}
-
-_cache: dict[str, TrackerClassification] = {}
+Rules:
+- Use ONLY the FACTS and BACKGROUND provided. Do not invent companies, numbers or data types.
+- Describe what trackers CAN or MAY do. Never say a site is spying, malicious or acting illegally.
+- If a tracker has verified=false, say its label is an estimate and may be wrong.
+- No jargon and no scare language. Be concise.
+- Protections must be practical steps the person can take, based on BACKGROUND.
+- Reply with ONE JSON object and nothing else, using exactly these keys:
+{"explanation": "2-4 sentences", "data_collected": ["..."], "possible_uses": ["..."], "protections": ["..."], "uncertainty_note": "one sentence"}"""
 
 
-@lru_cache
-def _known() -> dict:
-    return json.loads(DATA_PATH.read_text())
+def build_facts(req: AIAnalysisRequest) -> dict:
+    ranked = sorted(req.trackers, key=lambda t: t.request_count, reverse=True)
+    categories = Counter((t.category or "unknown") for t in req.trackers)
+    return {
+        "website": req.website,
+        "tracker_count": len(req.trackers),
+        "category_counts": dict(categories),
+        "unverified_count": sum(1 for t in req.trackers if not t.verified),
+        "cookie_count": req.cookie_count,
+        "third_party_request_count": req.third_party_request_count,
+        "permissions": req.permissions,
+        "top_trackers": [
+            {
+                "domain": t.name,
+                "company": t.company,
+                "category": t.category or "unknown",
+                "verified": t.verified,
+                "confidence": t.confidence,
+                "requests": t.request_count,
+            }
+            for t in ranked[:MAX_TRACKERS_TO_MODEL]
+        ],
+    }
 
 
-def registrable(domain: str) -> str:
-    return _extract(domain).registered_domain or domain.lower()
+def knowledge_for(facts: dict) -> dict:
+    cats = {c: CATEGORY_KNOWLEDGE.get(c, CATEGORY_KNOWLEDGE["unknown"])
+            for c in facts["category_counts"]}
+    perms = {p: PERMISSION_KNOWLEDGE[p] for p in facts["permissions"]
+             if p in PERMISSION_KNOWLEDGE}
+    return {"categories": cats, "permissions": perms, "general": GENERAL_PROTECTIONS}
 
 
-def _from_known(base: str) -> TrackerClassification | None:
-    entry = _known().get(base)
-    if not entry:
-        return None
-    cat = entry["category"]
-    return TrackerClassification(
-        name=base, company=entry["company"], category=cat,
-        risk_level=CATEGORY_RISK.get(cat, "unknown"),
-        confidence=1.0, source="known_list", verified=True,
+def _dedupe(items: list[str], limit: int) -> list[str]:
+    seen, out = set(), []
+    for i in items:
+        if i and i not in seen:
+            seen.add(i)
+            out.append(i)
+    return out[:limit]
+
+
+# ---------- deterministic fallback ----------
+
+def _risk_level(facts: dict) -> str:
+    counts = facts["category_counts"]
+    heavy = counts.get("advertising", 0) + counts.get("fingerprinting", 0)
+    if heavy >= 3:
+        return "high"
+    if heavy or counts.get("social") or counts.get("analytics"):
+        return "medium"
+    return "low"
+
+
+def _template(req: AIAnalysisRequest, facts: dict, knowledge: dict) -> AIAnalysisResponse:
+    site = facts["website"] or "This page"
+    parts = [f"{n} {c}" for c, n in facts["category_counts"].items()]
+    explanation = f"{site} contacted {facts['tracker_count']} tracking-related services"
+    explanation += f" ({', '.join(parts)})." if parts else "."
+    if facts["cookie_count"]:
+        explanation += f" It also stored {facts['cookie_count']} cookies."
+
+    data, uses, prot = [], [], []
+    for k in knowledge["categories"].values():
+        data += k["data_collected"]
+        uses += k["possible_uses"]
+        prot += k["protections"]
+    for perm, meaning in knowledge["permissions"].items():
+        data.append(f"the {perm} permission means the site {meaning}")
+    prot += knowledge["general"]
+    prot = _dedupe(prot, 6)
+
+    note = None
+    if facts["unverified_count"]:
+        note = (f"{facts['unverified_count']} of these services are not in our known "
+                "tracker list, so their labels are estimates and may be wrong.")
+    return AIAnalysisResponse(
+        explanation=explanation,
+        risk_summary=f"Overall tracking exposure: {_risk_level(facts)}.",
+        data_collected=_dedupe(data, 8),
+        possible_uses=_dedupe(uses, 6),
+        protections=prot,
+        recommendations=prot,
+        uncertainty_note=note,
+        tracker_classifications=req.trackers,
+        generated_by="template",
     )
 
 
-def _from_heuristics(domain: str) -> TrackerClassification | None:
-    d = domain.lower()
-    for cat, words in HEURISTICS.items():
-        if any(w in d for w in words):
-            return TrackerClassification(
-                name=registrable(domain), category=cat,
-                risk_level=CATEGORY_RISK.get(cat, "unknown"),
-                confidence=0.55, source="heuristic", verified=False,
-            )
-    return None
+# ---------- Hugging Face model ----------
+
+def _parse_json(text: str) -> dict:
+    text = re.sub(r"^```(?:json)?|```$", "", text.strip(), flags=re.MULTILINE).strip()
+    start, end = text.find("{"), text.rfind("}")
+    if start == -1 or end == -1:
+        raise ValueError("no JSON object in model output")
+    return json.loads(text[start:end + 1])
 
 
-@lru_cache
-def _zero_shot():
-    from transformers import pipeline  # lazy: slow import, big model
-    return pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
+def _as_str_list(value, limit: int) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return _dedupe([str(v).strip() for v in value if isinstance(v, (str, int, float))], limit)
 
 
-def _from_model(obs: ObservedDomain) -> TrackerClassification:
-    text = (f"Network domain {obs.domain}. Resource types: "
-            f"{', '.join(obs.resource_types) or 'unknown'}. "
-            f"{obs.request_count} requests, sets {obs.cookie_count} cookies.")
-    out = _zero_shot()(text, list(MODEL_LABELS), hypothesis_template="This domain is used for {}.")
-    label, score = out["labels"][0], float(out["scores"][0])
-    if score < 0.45:
-        return TrackerClassification(name=registrable(obs.domain), category="unknown",
-                                     risk_level="unknown", confidence=score,
-                                     source="model", verified=False)
-    cat = MODEL_LABELS[label]
-    return TrackerClassification(
-        name=registrable(obs.domain), category=cat,
-        risk_level=CATEGORY_RISK.get(cat, "unknown"),
-        confidence=round(score, 2), source="model", verified=False,
+def _call_model(facts: dict, knowledge: dict) -> dict:
+    from huggingface_hub import InferenceClient
+
+    client = InferenceClient(token=os.environ["HF_TOKEN"], timeout=30)
+    model = os.getenv("HF_MODEL", "Qwen/Qwen2.5-7B-Instruct")
+    user = (
+        "FACTS:\n" + json.dumps(facts, indent=2)
+        + "\n\nBACKGROUND:\n" + json.dumps(knowledge, indent=2)
+        + "\n\nWrite the JSON now."
     )
+    resp = client.chat.completions.create(
+        model=model,
+        messages=[{"role": "system", "content": SYSTEM_PROMPT},
+                  {"role": "user", "content": user}],
+        max_tokens=700,
+        temperature=0.3,
+    )
+    return _parse_json(resp.choices[0].message.content)
 
 
-def classify(obs: ObservedDomain) -> TrackerClassification:
-    base = registrable(obs.domain)
-    if base in _cache:
-        return _cache[base]
+# ---------- public entry point ----------
 
-    result = (_from_known(base) or _from_heuristics(obs.domain))
-    if result is None:
-        if os.getenv("ENABLE_MODEL", "true").lower() == "true":
-            result = _from_model(obs)
-        else:
-            result = TrackerClassification(name=base, category="unknown",
-                                           risk_level="unknown", source="heuristic")
-    _cache[base] = result
-    return result
+def analyze(req: AIAnalysisRequest) -> AIAnalysisResponse:
+    facts = build_facts(req)
+    key = hashlib.sha256(json.dumps(facts, sort_keys=True).encode()).hexdigest()
+    if key in _cache:
+        return _cache[key]
 
+    knowledge = knowledge_for(facts)
+    base = _template(req, facts, knowledge)
 
-def classify_many(domains: list[ObservedDomain]) -> list[TrackerClassification]:
-    return [classify(d) for d in domains]
+    if os.getenv("HF_TOKEN"):
+        try:
+            out = _call_model(facts, knowledge)
+            explanation = str(out.get("explanation", "")).strip()
+            if explanation:
+                protections = _as_str_list(out.get("protections"), 6) or base.protections
+                base = base.model_copy(update={
+                    "explanation": explanation,
+                    "data_collected": _as_str_list(out.get("data_collected"), 8) or base.data_collected,
+                    "possible_uses": _as_str_list(out.get("possible_uses"), 6) or base.possible_uses,
+                    "protections": protections,
+                    "recommendations": protections,
+                    "uncertainty_note": str(out.get("uncertainty_note") or "").strip() or base.uncertainty_note,
+                    "generated_by": "model",
+                })
+        except Exception as exc:       # quota, timeout, bad JSON... use the template
+            logger.warning("HF call failed, using template: %s", exc)
+
+    _cache[key] = base
+    return base

@@ -116,3 +116,16 @@ def classify(obs: ObservedDomain) -> TrackerClassification:
 
 def classify_many(domains: list[ObservedDomain]) -> list[TrackerClassification]:
     return [classify(d) for d in domains]
+
+
+def classify_aggregated(domains: list[ObservedDomain]) -> list[TrackerClassification]:
+    merged: dict[str, TrackerClassification] = {}
+    for d in domains:
+        c = classify(d)
+        if c.name in merged:
+            prev = merged[c.name]
+            merged[c.name] = prev.model_copy(
+                update={"request_count": prev.request_count + d.request_count})
+        else:
+            merged[c.name] = c.model_copy(update={"request_count": d.request_count})
+    return list(merged.values())
