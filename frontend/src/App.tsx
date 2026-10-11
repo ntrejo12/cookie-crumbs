@@ -1,10 +1,66 @@
 import { useEffect, useState } from "react";
+import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
+import type { User } from "./components/Sidebar";
 import Dashboard from "./pages/Dashboard";
 import LoginPage from "./pages/LoginPage";
 
+/**
+ * Frontend-only accounts for now: the signed-in user is remembered in this browser
+ * ("Keep me logged in" = localStorage, otherwise only for this tab). Swap these for neon.auth later.
+ */
+const USER_KEY = "cc-user";
+
+function loadUser(): User | null {
+  try {
+    const raw = localStorage.getItem(USER_KEY) ?? sessionStorage.getItem(USER_KEY);
+    return raw ? (JSON.parse(raw) as User) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveUser(user: User | null, remember = true) {
+  try {
+    localStorage.removeItem(USER_KEY);
+    sessionStorage.removeItem(USER_KEY);
+    if (user) (remember ? localStorage : sessionStorage).setItem(USER_KEY, JSON.stringify(user));
+  } catch {
+    /* storage blocked: you'll just be logged out on refresh */
+  }
+}
+
+const nameFromEmail = (email: string) => {
+  const n = email.split("@")[0].replace(/[._-]+/g, " ").trim();
+  return n ? n.charAt(0).toUpperCase() + n.slice(1) : "Cookie fan";
+};
+
 function App() {
-  // Frontend only for now: any email + password "logs in"
-  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const [user, setUser] = useState<User | null>(loadUser);
+
+  const signIn = (u: User, remember: boolean) => {
+    saveUser(u, remember);
+    setUser(u);
+    navigate("/dashboard");
+  };
+
+  const logOut = () => {
+    saveUser(null);
+    setUser(null);
+    navigate("/");
+  };
+
+  const updateUser = (u: User) => {
+    const remembered = (() => {
+      try {
+        return localStorage.getItem(USER_KEY) !== null;
+      } catch {
+        return true;
+      }
+    })();
+    saveUser(u, remembered);
+    setUser(u);
+  };
 
   // Page background = the logo's background, read from the logo exactly as the browser draws it
   useEffect(() => {
@@ -25,11 +81,49 @@ function App() {
     img.src = "/logo.png";
   }, []);
 
-  if (!userEmail) {
-    return <LoginPage onLogin={({ email }) => setUserEmail(email)} onSignUp={() => console.log("go to sign up")} />;
-  }
-
-  return <Dashboard userEmail={userEmail} onLogout={() => setUserEmail(null)} />;
+  return (
+    <Routes>
+      <Route
+        path="/"
+        element={
+          user ? (
+            <Navigate to="/dashboard" replace />
+          ) : (
+            <LoginPage
+              mode="login"
+              onLogin={({ email, remember }) => signIn({ name: nameFromEmail(email), email }, remember)}
+              onSwitchMode={() => navigate("/signup")}
+            />
+          )
+        }
+      />
+      <Route
+        path="/signup"
+        element={
+          <LoginPage
+            mode="signup"
+            onSignUp={({ name, email, remember }) => signIn({ name, email }, remember)}
+            onSwitchMode={() => navigate("/")}
+          />
+        }
+      />
+      {/* The extension opens /dashboard?site=<domain> directly, logged in or not */}
+      <Route
+        path="/dashboard"
+        element={
+          <Dashboard
+            user={user}
+            onLogout={logOut}
+            onLogin={() => navigate("/")}
+            onSignUp={() => navigate("/signup")}
+            onUpdateUser={updateUser}
+            onDeleteAccount={logOut}
+          />
+        }
+      />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
 }
 
 export default App;

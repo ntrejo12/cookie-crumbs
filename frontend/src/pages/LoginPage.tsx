@@ -1,9 +1,9 @@
 import { useState, type FormEvent } from "react";
 
 /**
- * Cookie Crumbs: Login page
- * Page background = logo background (#482E0E, set in index.css as bg-crumbs-bg).
- * Frontend only: onLogin just receives the form values.
+ * Cookie Crumbs: Login + sign-up page ("Bake an account")
+ * Page background = logo background (bg-crumbs-bg in index.css).
+ * Frontend only: onLogin / onSignUp just receive the form values.
  */
 
 // Deterministic pseudo-random so crumbs don't jump around between renders
@@ -46,26 +46,62 @@ const inputClass =
   "w-full rounded-xl border-2 border-[#E5CFA8] bg-white px-4 py-3 text-[15px] text-chip outline-none transition placeholder:text-[#B39A7E] focus:border-dough focus:ring-4 focus:ring-dough/40";
 
 interface LoginPageProps {
+  mode?: "login" | "signup";
   onLogin?: (values: { email: string; password: string; remember: boolean }) => void;
-  onSignUp?: () => void;
+  onSignUp?: (values: { name: string; email: string; password: string; remember: boolean }) => void;
+  /** switch between "Log in" and "Bake an account" */
+  onSwitchMode?: () => void;
 }
 
-export default function LoginPage({ onLogin, onSignUp }: LoginPageProps) {
+export default function LoginPage({ mode = "login", onLogin, onSignUp, onSwitchMode }: LoginPageProps) {
+  const signup = mode === "signup";
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [remember, setRemember] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
-      setError("Fill in both fields to open the jar.");
+    if (signup) {
+      if (!name || !email || !password || !confirm) return setError("Fill in every field to bake your account.");
+      if (!email.includes("@")) return setError("That email doesn't look quite right.");
+      if (password.length < 8) return setError("Use at least 8 characters for your password.");
+      if (password !== confirm) return setError("Passwords don't match.");
+      setError("");
+      onSignUp?.({ name, email, password, remember });
       return;
     }
+    if (!email || !password) return setError("Fill in both fields to open the jar.");
     setError("");
     onLogin?.({ email, password, remember });
   };
+
+  const passwordField = (label: string, value: string, set: (v: string) => void, auto: string) => (
+    <label className="block">
+      <span className="mb-1.5 block text-sm font-semibold text-chip">{label}</span>
+      <div className="relative">
+        <input
+          type={showPassword ? "text" : "password"}
+          autoComplete={auto}
+          value={value}
+          onChange={(e) => set(e.target.value)}
+          placeholder="••••••••"
+          className={`${inputClass} pr-16`}
+        />
+        <button
+          type="button"
+          onClick={() => setShowPassword((s) => !s)}
+          aria-label={showPassword ? "Hide password" : "Show password"}
+          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2.5 py-1 text-xs font-semibold text-crust transition hover:bg-[#F6E8D0]"
+        >
+          {showPassword ? "Hide" : "Show"}
+        </button>
+      </div>
+    </label>
+  );
 
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-crumbs-bg px-4 py-10 font-sans">
@@ -101,9 +137,7 @@ export default function LoginPage({ onLogin, onSignUp }: LoginPageProps) {
             className="h-32 w-auto select-none"
             draggable={false}
           />
-          <h1 className="mt-3 font-serif text-4xl font-bold tracking-tight text-cream">
-            Cookie Crumbs
-          </h1>
+          <h1 className="mt-3 font-serif text-4xl font-bold tracking-tight text-cream">Cookie Crumbs</h1>
           <p className="mt-1 text-base text-dough">See who's following your crumbs.</p>
         </div>
 
@@ -114,12 +148,26 @@ export default function LoginPage({ onLogin, onSignUp }: LoginPageProps) {
           className="rounded-3xl border-2 border-crust bg-cream p-7 shadow-[0_20px_50px_rgba(0,0,0,0.35)] sm:px-10 sm:py-8"
         >
           <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-            <h2 className="font-serif text-2xl font-bold text-chip">Welcome back</h2>
-            <p className="text-sm text-[#6B4A2E]">Log in to open your cookie jar.</p>
+            <h2 className="font-serif text-2xl font-bold text-chip">{signup ? "Bake an account" : "Welcome back"}</h2>
+            <p className="text-sm text-[#6B4A2E]">
+              {signup ? "Mix in your details to start your cookie jar." : "Log in to open your cookie jar."}
+            </p>
           </div>
 
           {/* Fields side by side on wider screens */}
           <div className="mt-6 grid gap-4 sm:grid-cols-2 sm:gap-5">
+            {signup && (
+              <label className="block">
+                <span className="mb-1.5 block text-sm font-semibold text-chip">Name</span>
+                <input
+                  autoComplete="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Your name"
+                  className={inputClass}
+                />
+              </label>
+            )}
             <label className="block">
               <span className="mb-1.5 block text-sm font-semibold text-chip">Email</span>
               <input
@@ -131,28 +179,8 @@ export default function LoginPage({ onLogin, onSignUp }: LoginPageProps) {
                 className={inputClass}
               />
             </label>
-
-            <label className="block">
-              <span className="mb-1.5 block text-sm font-semibold text-chip">Password</span>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className={`${inputClass} pr-16`}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((s) => !s)}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2.5 py-1 text-xs font-semibold text-crust transition hover:bg-[#F6E8D0]"
-                >
-                  {showPassword ? "Hide" : "Show"}
-                </button>
-              </div>
-            </label>
+            {passwordField("Password", password, setPassword, signup ? "new-password" : "current-password")}
+            {signup && passwordField("Confirm password", confirm, setConfirm, "new-password")}
           </div>
 
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
@@ -165,9 +193,11 @@ export default function LoginPage({ onLogin, onSignUp }: LoginPageProps) {
               />
               Keep me logged in (we'll leave one good cookie)
             </label>
-            <a href="#" className="text-sm font-medium text-crust underline-offset-2 hover:underline">
-              Forgot password?
-            </a>
+            {!signup && (
+              <a href="#" className="text-sm font-medium text-crust underline-offset-2 hover:underline">
+                Forgot password?
+              </a>
+            )}
           </div>
 
           {error && (
@@ -182,7 +212,7 @@ export default function LoginPage({ onLogin, onSignUp }: LoginPageProps) {
               type="submit"
               className="w-full rounded-full bg-chip py-3.5 text-base font-bold text-cream transition hover:brightness-125 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-dough/60 active:scale-[0.99]"
             >
-              Log in
+              {signup ? "Bake my account" : "Log in"}
             </button>
 
             <button
@@ -195,14 +225,14 @@ export default function LoginPage({ onLogin, onSignUp }: LoginPageProps) {
                 <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z" />
                 <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z" />
               </svg>
-              Continue with Google
+              {signup ? "Sign up with Google" : "Continue with Google"}
             </button>
           </div>
 
           <p className="mt-6 text-center text-sm text-[#6B4A2E]">
-            New here?{" "}
-            <button type="button" onClick={onSignUp} className="font-bold text-crust underline-offset-2 hover:underline">
-              Bake an account
+            {signup ? "Already have an account? " : "New here? "}
+            <button type="button" onClick={onSwitchMode} className="font-bold text-crust underline-offset-2 hover:underline">
+              {signup ? "Log in" : "Bake an account"}
             </button>
           </p>
         </form>

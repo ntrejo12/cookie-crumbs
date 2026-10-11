@@ -5,32 +5,59 @@ import {
   type ScanRequest,
 } from "./lib/scanApi";
 
-const WEBSITE_URL = "http://localhost:5173/";
+const DASHBOARD_URL = "http://localhost:5173/dashboard";
+
+/** Show fake numbers instead of scanning. Set to false to use the real scan. */
+const USE_TEST_DATA = true;
+
+interface Stats {
+  website: string;
+  trackers: number;
+  requests: number;
+  cookies: number;
+  domains: number;
+}
+
+const TEST_STATS: Stats = {
+  website: "example.com",
+  trackers: 7,
+  requests: 42,
+  cookies: 18,
+  domains: 12,
+};
 
 interface TabScan {
   website: string;
   requests: Record<string, number>;
 }
 
-/**
- * What the bandit says in the speech bubble.
- * Based on known trackers; tweak the thresholds here.
- */
-function verdict(scan: ScanResponse) {
-  const n = scan.tracker_count;
-  if (n === 0) return { text: "Spotless! Not a crumb in sight.", tone: "text-[#3E7A3A]" };
-  if (n <= 3) return { text: "Not too crumby!", tone: "text-[#3E7A3A]" };
-  if (n <= 9) return { text: "Getting a little crumby...", tone: "text-crust" };
-  if (n <= 19) return { text: "Pretty crumby. Trackers are watching.", tone: "text-ad" };
-  return { text: "Crumbs everywhere! Time to clean up.", tone: "text-ad" };
+/** What the bandit says, based on known trackers. Tweak the thresholds here. */
+function verdict(trackers: number) {
+  if (trackers === 0) return "Spotless! Not a crumb in sight.";
+  if (trackers <= 3) return "Not too crumby!";
+  if (trackers <= 9) return "Getting a little crumby...";
+  if (trackers <= 19) return "Pretty crumby. Trackers are watching.";
+  return "Crumbs everywhere! Time to clean up.";
+}
+
+function toStats(scan: ScanResponse): Stats {
+  return {
+    website: scan.website,
+    trackers: scan.tracker_count,
+    requests: scan.third_party_requests,
+    cookies: scan.cookie_count,
+    domains: scan.trackers.length,
+  };
 }
 
 export default function PopupApp() {
-  const [scan, setScan] = useState<ScanResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<Stats | null>(USE_TEST_DATA ? TEST_STATS : null);
+  const [loading, setLoading] = useState(!USE_TEST_DATA);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (USE_TEST_DATA) return;
+
     async function loadScan() {
       try {
         setLoading(true);
@@ -80,7 +107,7 @@ export default function PopupApp() {
         };
 
         const result = await analyzeScan(payload);
-        setScan(result);
+        setStats(toStats(result));
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unable to analyze this website.");
       } finally {
@@ -91,59 +118,79 @@ export default function PopupApp() {
     void loadScan();
   }, []);
 
+  // Go straight into the dashboard, opened on the site you're looking at
   function openFullJar() {
-    chrome.tabs.create({ url: WEBSITE_URL });
+    const site = stats?.website ? `?site=${encodeURIComponent(stats.website)}` : "";
+    chrome.tabs.create({ url: DASHBOARD_URL + site });
   }
 
   // what the bandit says
-  const said =
-    loading ? { text: "Sniffing out crumbs...", tone: "text-cocoa" }
-    : error ? { text: error, tone: "text-ad" }
-    : scan ? verdict(scan)
-    : { text: "Nothing to see yet.", tone: "text-cocoa" };
+  const said = loading
+    ? "Sniffing out crumbs..."
+    : error
+      ? error
+      : stats
+        ? verdict(stats.trackers)
+        : "Nothing to see yet.";
 
   const show = (n: number | undefined) => (loading || n === undefined ? "–" : n);
 
   const cookies = [
-    { img: "/popup/cookie-pink.png", label: "Known Trackers", value: show(scan?.tracker_count) },
-    { img: "/popup/cookie-green.png", label: "3rd Party Requests", value: show(scan?.third_party_requests) },
-    { img: "/popup/cookie-white.png", label: "Page Accessible", value: show(scan?.cookie_count) },
-    { img: "/popup/cookie-blue.png", label: "3rd Party Domains", value: show(scan?.trackers.length) },
+    { img: "/popup/cookie-pink.png", label: "Known Trackers", value: show(stats?.trackers) },
+    { img: "/popup/cookie-green.png", label: "3rd Party Requests", value: show(stats?.requests) },
+    { img: "/popup/cookie-white.png", label: "Page Accessible", value: show(stats?.cookies) },
+    { img: "/popup/cookie-blue.png", label: "3rd Party Domains", value: show(stats?.domains) },
   ];
 
   return (
-    <div className="w-[380px] bg-[#FCEECA] px-5 pb-3 pt-4 font-sans text-chip">
+    <div className="w-[380px] bg-[#FCEECA] px-5 pb-4 pt-4 font-sans text-chip">
       {/* Title */}
       <header className="text-center">
         <h1 className="font-serif text-3xl font-bold tracking-tight">Cookie Crumbs</h1>
         <p className="mt-0.5 truncate text-xs text-cocoa">
-          {scan ? <>Scanning <span className="font-semibold text-chip">{scan.website}</span></> : "See who's following your crumbs."}
+          {stats ? (
+            <>
+              Scanning <span className="font-semibold text-chip">{stats.website}</span>
+            </>
+          ) : (
+            "See who's following your crumbs."
+          )}
         </p>
       </header>
 
-      {/* Bandit + speech bubble */}
-      <section className="mt-2 flex items-center justify-center gap-1">
-        <img src="/popup/bandit.png" alt="" className="w-[116px] shrink-0 select-none" draggable={false} />
-        <div className="relative w-[190px] shrink-0">
+      {/* Bandit + speech bubble: positioned exactly as in the Canva mockup,
+          measured against the cookie grid below (left cookie starts at 35px, right cookie ends at 305px) */}
+      <section className="relative mt-2 h-[161px]">
+        <img
+          src="/popup/bandit.png"
+          alt=""
+          className="absolute left-[22px] top-[29px] w-[168px] select-none"
+          draggable={false}
+        />
+        <div className="absolute left-[195px] top-0 w-[138px]">
           <img src="/popup/bubble.png" alt="" className="w-full select-none" draggable={false} />
           <p
             aria-live="polite"
-            className={`absolute left-[15%] right-[7%] top-[8%] bottom-[30%] flex items-center justify-center text-center font-hand text-[19px] font-bold leading-tight ${said.tone} ${loading ? "motion-safe:animate-pulse" : ""}`}
+            className={`absolute bottom-[30%] left-[14%] right-[7%] top-[8%] flex items-center justify-center text-center font-hand text-[14px] font-bold leading-tight text-black ${
+              loading ? "motion-safe:animate-pulse" : ""
+            }`}
           >
-            {said.text}
+            {said}
           </p>
         </div>
       </section>
 
       {/* The four cookies */}
-      <section className="mt-1 grid grid-cols-2 gap-x-4 gap-y-1.5" aria-label="Scan results">
+      <section className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1.5" aria-label="Scan results">
         {cookies.map((c, i) => (
           <div key={c.label} className="flex flex-col items-center">
-            <div className="relative h-[98px] w-[98px] motion-safe:animate-pop" style={{ animationDelay: `${i * 80}ms` }}>
-              <img src={c.img} alt="" className="h-full w-full object-contain select-none" draggable={false} />
+            <div
+              className="relative h-[92px] w-[92px] motion-safe:animate-pop"
+              style={{ animationDelay: `${i * 80}ms` }}
+            >
+              <img src={c.img} alt="" className="h-full w-full select-none object-contain" draggable={false} />
               <span
-                className="absolute inset-0 flex items-center justify-center font-serif text-[32px] font-bold tabular-nums text-chip"
-                style={{ textShadow: "0 0 3px #fff, 0 0 6px #fff, 0 0 10px #fff" }}
+                className="absolute inset-0 flex items-center justify-center font-serif text-[30px] font-bold tabular-nums text-chip"
               >
                 {c.value}
               </span>
@@ -157,16 +204,16 @@ export default function PopupApp() {
       <button
         type="button"
         onClick={openFullJar}
-        className="group mt-2 flex w-full items-center justify-center gap-3 rounded-2xl px-3 py-2 transition hover:bg-white/50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-dough/50"
+        className="group mt-3 flex w-full items-center justify-center gap-3 rounded-2xl bg-[#FEF7E5] px-4 py-2 transition hover:brightness-[1.02] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-dough/50 active:scale-[0.99]"
       >
-        <span className="text-right leading-tight">
+        <span className="text-center leading-tight">
           <span className="block text-sm font-semibold text-cocoa">for more info</span>
-          <span className="block font-serif text-xl font-bold text-chip group-hover:underline">Open The Cookie Jar</span>
+          <span className="block font-serif text-xl font-bold text-chip">Open The Cookie Jar</span>
         </span>
         <img
           src="/popup/jar.png"
           alt=""
-          className="h-[70px] w-auto transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-105"
+          className="h-[64px] w-auto transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-105"
           draggable={false}
         />
       </button>

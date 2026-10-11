@@ -4,7 +4,7 @@ import CookieScore from "../components/CookieScore";
 import SitePicker from "../components/SitePicker";
 import { CATEGORY_ORDER, countByCategory, scoreLabel, type SiteScan } from "../data/mockScans";
 
-/** Taste test: two sites side by side, same scale, so you can see which is crumbier. */
+/** Crumb test: two sites side by side, same scale, so you can see which is crumbier. */
 export default function TasteTestView({ scans }: { scans: SiteScan[] }) {
   const [leftDomain, setLeftDomain] = useState(scans[1]?.domain ?? scans[0].domain);
   const [rightDomain, setRightDomain] = useState(scans[2]?.domain ?? scans[0].domain);
@@ -46,7 +46,7 @@ export default function TasteTestView({ scans }: { scans: SiteScan[] }) {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="font-serif text-3xl font-bold text-chip sm:text-4xl">Taste test: which site is crumbier?</h1>
+        <h1 className="font-serif text-3xl font-bold text-chip sm:text-4xl">Crumb test: which site is crumbier?</h1>
         <p className="mt-1 text-cocoa">Pick two sites you've scanned and compare what they leave behind.</p>
       </header>
 
@@ -64,7 +64,7 @@ export default function TasteTestView({ scans }: { scans: SiteScan[] }) {
       </p>
 
       <div className="rounded-2xl bg-chip px-6 py-4 text-cream">
-        <span className="font-serif font-bold">Cookie class: </span>A third-party cookie is a crumb dropped by someone other
+        <span className="font-serif font-bold">Behind the crumbs: </span>A third-party cookie is a crumb dropped by someone other
         than the site you visited.
       </div>
     </div>
